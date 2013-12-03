@@ -158,3 +158,22 @@ describe 'StateBox', ->
 		it 'builds graph', ->
 			graph = @mgr.buildGraph( '' )
 			should.exist graph
+
+		#get state
+		#get start state
+		#parse
+
+	#context
+		#current state name
+		#choose initial state
+		#enters initial state
+		#leaves current state
+		#enters new state
+		#trigger
+		#get value
+		#set value
+		#merge start values
+
+	#State
+		#enters
+		#leaves
