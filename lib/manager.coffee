@@ -53,4 +53,10 @@ class Manager
 	stopProcessing: (cb)->
 		@storage.stopProcessing cb
 
+	isProcessing: ->
+		@storage.isProcessing()
+
+	isStopping: ->
+		@storage.isStopping()
+
 module.exports = Manager

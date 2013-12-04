@@ -26,6 +26,9 @@ class Context
 				@status = Context.Status.Failed
 				Q.reject({})
 
+	abort: ->
+		@status = Context.Status.Aborted
+
 	destroy: ->
 		@storage.destroyContext( @graph_id, @id )
 

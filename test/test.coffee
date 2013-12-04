@@ -12,15 +12,25 @@ class TestStorage extends StateBox.Storage
 		@destroy_graph_calls = 0
 
 		@save_context_calls = 0
+		@update_context_calls = 0
 		@get_contexts_calls = 0
 		@get_context_calls = 0
 		@destroy_context_calls = 0
+		@add_trigger_calls = 0
+
+		@process_calls = 0
+		@stop_processing_calls = 0
+		@is_processing_calls = 0
+		@is_stopping_calls = 0
 
 		@graphs = {}
 		@contexts = {}
 		@context_counts = {}
+		@triggers = {}
 		@graph_count = 0
-		super()
+
+		super
+			processDelayMs: 10
 
 	connect: ->
 		@connect_calls++
@@ -60,6 +70,10 @@ class TestStorage extends StateBox.Storage
 		@save_context_calls++
 		Q.resolve ctx
 
+	updateContext: (ctx)->
+		@update_context_calls++
+		Q.resolve ctx
+
 	destroyContext: (graph_id, ctx_id)->
 		delete @contexts[ graph_id ][ ctx_id ]
 		@destroy_context_calls++
@@ -74,10 +88,34 @@ class TestStorage extends StateBox.Storage
 		Q.resolve @contexts[ graph_id ][ context_id ]
 
 	addTrigger: (graph_id, context_id, name, values, source)->
-		Q.reject({})
+		@triggers[ graph_id ] ?= {}
+		@triggers[ graph_id ][ context_id ] ?= []
+		@triggers[ graph_id ][ context_id ].push
+			name: name
+			values: values
+			source: source
+
+		@add_trigger_calls++
+		Q.resolve({})
+
+	process: ->
+		@process_calls++
+		super()
+
+	stopProcessing: (cb)->
+		@stop_processing_calls++
+		super cb
+
+	isProcessing: ->
+		@is_processing_calls++
+		super()
+
+	isStopping: ->
+		@is_stopping_calls++
+		super()
 
 describe 'StateBox', ->
-	describe 'Storage', ->
+	describe 'Manager', ->
 		before (done)->
 			@storage = new TestStorage()
 			@mgr = new StateBox.Manager( @storage )
@@ -151,21 +189,72 @@ describe 'StateBox', ->
 								ctx1.id.should.eql ctx.id
 								ctx1.graph_id.should.eql graph.id
 								@storage.get_context_calls.should.eql 1
+								ctx1.status.should.eql StateBox.Context.Status.Active
 
-								ctx.destroy().then =>
-									@storage.destroy_context_calls.should.eql 1
+								@mgr.abortContext( graph.id, ctx.id ).then =>
+									@mgr.getContext( graph.id, ctx.id ).then (ctx1a)=>
+										ctx1a.status.should.eql StateBox.Context.Status.Aborted
 
-									@mgr.getContexts( graph.id ).then (ctxs2)=>
-										ctxs2.should.be.an.instanceOf Array
-										ctxs2.length.should.eql 0
-										@storage.get_contexts_calls.should.eql 3
+										ctx.destroy().then =>
+											@storage.destroy_context_calls.should.eql 1
 
-										@mgr.getContext( graph.id, ctx.id ).then (ctx2)=>
-											should.not.exist ctx2
-											@storage.get_context_calls.should.eql 2
-											done()
+											@mgr.getContexts( graph.id ).then (ctxs2)=>
+												ctxs2.should.be.an.instanceOf Array
+												ctxs2.length.should.eql 0
+												@storage.get_contexts_calls.should.eql 3
+
+												@mgr.getContext( graph.id, ctx.id ).then (ctx2)=>
+													should.not.exist ctx2
+													@storage.get_context_calls.should.eql 4
+
+													@storage.update_context_calls.should.eql 1
+													done()
 				.fail (r)->
 					done(r)
+
+		it 'adds trigger', (done)->
+			@mgr.buildGraph( '' ).then (graph)=>
+				@mgr.runGraph( graph.id ).then (ctx)=>
+					@storage.add_trigger_calls.should.eql 0
+					@mgr.addTrigger( graph.id, ctx.id, 'test_trigger', { test: 1 }, 'test' ).then =>
+						@storage.add_trigger_calls.should.eql 1
+						done()
+
+		it 'manages processing', (done)->
+			@storage.process_calls.should.eql 0
+			@storage.stop_processing_calls.should.eql 0
+			@storage.is_processing_calls.should.eql 0
+			@storage.is_stopping_calls.should.eql 0
+
+			@mgr.isProcessing().should.eql false
+			@mgr.isStopping().should.eql false
+
+			@storage.process_calls.should.eql 0
+			@storage.stop_processing_calls.should.eql 0
+			@storage.is_processing_calls.should.eql 1
+			@storage.is_stopping_calls.should.eql 1
+
+			@mgr.startProcessing().then =>
+				@mgr.isProcessing().should.eql true
+				@mgr.isStopping().should.eql false
+
+				@storage.process_calls.should.eql 1
+				@storage.stop_processing_calls.should.eql 0
+				@storage.is_processing_calls.should.eql 2
+				@storage.is_stopping_calls.should.eql 2
+
+				@mgr.stopProcessing =>
+					@mgr.isProcessing().should.eql false
+					@mgr.isStopping().should.eql false
+
+					@storage.process_calls.should.eql 1
+					@storage.stop_processing_calls.should.eql 1
+					@storage.is_processing_calls.should.eql 3
+					@storage.is_stopping_calls.should.eql 3
+
+					done()
+			.fail (r)->
+				done( r )
 
 	describe 'Graph', ->
 		before (done)->
@@ -186,20 +275,26 @@ describe 'StateBox', ->
 				ss.hasFlag( StateBox.State.Flags.Start ).should.eql true
 				done()
 
-		#get state
-		#parse
+		it 'allows get state by name', (done)->
+			@mgr.buildGraph( '' ).then (graph)=>
+				ss = graph.getState( 'start' )
+				should.exist ss
+				ss.name.should.eql 'start'
+				done()
+
+		##parse
 
 	#context
-		#current state name
 		#choose initial state
-		#enters initial state
-		#leaves current state
-		#enters new state
-		#trigger
 		#get value
 		#set value
 		#merge start values
 
+		##trigger
+		##enters initial state
+		##enters new state
+		##leaves current state
+
 	#State
-		#enters
-		#leaves
+		##enters
+		##leaves

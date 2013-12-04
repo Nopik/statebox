@@ -8,6 +8,8 @@ class Storage
 		@processing = Q.resolve({})
 
 	process: ->
+		old_processing = @processing
+
 		@processing.then =>
 			q = Q.defer()
 
@@ -30,7 +32,7 @@ class Storage
 
 			p()
 
-			q.promise
+			old_processing
 
 	stopProcessing: (cb)->
 		@processingStopRequested = true
@@ -85,5 +87,8 @@ class Storage
 
 	addTrigger: (graph_id, context_id, name, values, source)->
 		Q.reject({})
+
+	updateContext: (ctx)->
+		Q.resolve({})
 
 module.exports = Storage
