@@ -1,18 +1,30 @@
 State = require './state'
+Q = require 'q'
 
 class Context
+	@StateValueName: 'state'
+
+	@Status:
+		Active: 1
+		Finished: 2
+		Failed: 3
+		Aborted: 4
+
 	constructor: (@graph_id, @storage, @values = {})->
-		@graph = @storage.getGraph( @graph_id )
+		@values ?= {}
+		@status = Context.Status.Active
+		@setValue Context.StateValueName, null
 
-		@currentState = null
+	init: ->
+		@storage.getGraph( @graph_id ).then (graph)=>
+			startState = graph.getStartState()
 
-		startState = @graph.getStartState()
-
-		if startState?
-
-			@_moveToState( startState )
-		else
-			throw "Graph #{@graph_id} has no start state"
+			if startState?
+				@_moveToState( startState )
+				Q.resolve({})
+			else
+				@status = Context.Status.Failed
+				Q.reject({})
 
 	destroy: ->
 		@storage.destroyContext( @graph_id, @id )
@@ -21,17 +33,18 @@ class Context
 
 	getValue: (name)->
 
-	setValue: (name)->
+	setValue: (name, value)->
+		@values[ name ] = value
 
 	_moveToState: (state)->
-		@currentState?.leave()
+		cs = @getValue Context.StateValueName
+		cs?.leave()
 
-		@currentState = state
+		@setValue Context.StateValueName, state
 
-		@currentState?.enter()
+		state?.enter()
 
-		if @currentState.hasFlag( State.Flags.Finish )
-			false
-			#TODO: what to do here?
+		if state.hasFlag( State.Flags.Finish )
+			@status = Context.Status.Finished
 
 module.exports = Context
