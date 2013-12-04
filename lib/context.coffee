@@ -35,6 +35,7 @@ class Context
 	trigger: (name, values)->
 
 	getValue: (name)->
+		@values[ name ]
 
 	setValue: (name, value)->
 		@values[ name ] = value

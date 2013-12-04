@@ -284,11 +284,33 @@ describe 'StateBox', ->
 
 		##parse
 
-	#context
-		#choose initial state
-		#get value
-		#set value
-		#merge start values
+	describe 'Context', ->
+		before (done)->
+			@storage = new TestStorage()
+			@mgr = new StateBox.Manager( @storage )
+			@mgr.init().then =>
+				@mgr.buildGraph( '' ).then (graph)=>
+					@graph = graph
+
+					@mgr.runGraph( graph.id, { foo: 42 } ).then (ctx)=>
+						@ctx = ctx
+						done()
+
+		it 'chooses initial state', ->
+			ss = @graph.getStartState()
+			should.exist ss
+			@ctx.getValue( StateBox.Context.StateValueName ).should.eql ss
+
+		it 'sets values', ->
+			v = 'test_val'
+			n = 'test name'
+
+			should.not.exist @ctx.getValue( n )
+			@ctx.setValue n, v
+			@ctx.getValue( n ).should.eql v
+
+		it 'merges initial values', ->
+			@ctx.getValue( 'foo' ).should.eql 42
 
 		##trigger
 		##enters initial state
