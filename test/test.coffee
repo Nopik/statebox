@@ -159,8 +159,13 @@ describe 'StateBox', ->
 			graph = @mgr.buildGraph( '' )
 			should.exist graph
 
+		it 'graphs have start node', ->
+			graph = @mgr.buildGraph( '' )
+			ss = graph.getStartState()
+			should.exist ss
+			ss.hasFlag( StateBox.State.Flags.Start ).should.eql true
+
 		#get state
-		#get start state
 		#parse
 
 	#context
