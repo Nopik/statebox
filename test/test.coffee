@@ -273,7 +273,6 @@ describe 'StateBox', ->
 		it 'merges initial values', ->
 			@ctx.getValue( 'foo' ).should.eql 42
 
-		#abort context
 		##trigger
 		##enters initial state
 		##enters new state
