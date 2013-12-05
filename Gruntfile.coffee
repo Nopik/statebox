@@ -3,7 +3,6 @@ module.exports = (grunt)->
 	grunt.initConfig
 		mochacli:
 			options:
-				require: [ 'should' ]
 				reporter: 'spec'
 				compilers: [ 'coffee:coffee-script' ]
 
