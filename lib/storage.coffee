@@ -1,6 +1,7 @@
 Q = require 'q'
+events = require 'events'
 
-class Storage
+class Storage extends events.EventEmitter
 	constructor: (@options = {})->
 		@options[ 'processDelayMs' ] ?= 100
 		@processingRunning = false
@@ -16,18 +17,27 @@ class Storage
 			@processingRunning = true
 			@processing = q.promise
 
+			@emit 'processing'
+
 			p = =>
 				if @processingStopRequested == false
-					@getActiveContext().then (ctx, triggerName, triggerValues)=>
+					@getActiveContext().then (trigInfo)=>
+						ctx = trigInfo.ctx
+						triggerName = trigInfo.triggerName
+						triggerValues = trigInfo.triggerValues
+
 						@handleContext( ctx, triggerName, triggerValues ).then (ctx)=>
 							@updateContext( ctx )
+							@emit 'processedTrigger', ctx, triggerName
 						.fin =>
 							process.nextTick p
 					, =>
+						@emit 'noActiveContext'
 						setTimeout p, @options[ 'processDelayMs' ]
 				else
 					@processingStopRequested = false
 					@processingRunning = false
+					@emit 'stoppedProcessing'
 					q.resolve({})
 
 			p()
@@ -48,7 +58,7 @@ class Storage
 	handleContext: (ctx, triggerName, triggerValues)->
 		q = Q.defer()
 
-		q.resolve({})
+		q.resolve( ctx )
 
 		q.promise
 

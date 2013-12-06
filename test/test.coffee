@@ -16,10 +16,7 @@ class TestStorage extends StateBox.Storage
 		@graph_count = 0
 
 		super
-			processDelayMs: 10
-
-	getActiveContext: ->
-		Q.reject({})
+			processDelayMs: 1
 
 	saveGraph: (graph)->
 		@graphs[ @graph_count ] = graph
@@ -67,6 +64,20 @@ class TestStorage extends StateBox.Storage
 			source: source
 
 		Q.resolve({})
+
+	getActiveContext: ->
+		for gid, graph of @triggers
+			for cid, triggers of graph
+				trigger = triggers.shift()
+
+				if trigger?
+					return Q.resolve
+						ctx: @contexts[ gid ][ cid ]
+						triggerName: trigger.name
+						triggerValues: trigger.values
+						source: trigger.source
+
+		Q.reject({})
 
 describe 'StateBox', ->
 	describe 'Manager', ->
@@ -216,6 +227,43 @@ describe 'StateBox', ->
 				@mgr.stopProcessing f
 			.fail (r)->
 				done( r )
+
+		describe 'Processing', ->
+			before (done)->
+				@mgr.buildGraph( '' ).then (graph)=>
+					@graph = graph
+
+					@mgr.runGraph( @graph.id ).then (ctx)=>
+						@ctx = ctx
+
+						@mgr.startProcessing().then ->
+							done()
+
+			after (done)->
+				@mgr.stopProcessing ->
+					done()
+
+			it 'performs processing', (done)->
+				handleSpy = sinon.spy @storage, 'handleContext'
+				tName = 'test name'
+				tVals =
+					foo: 42
+
+				processed = (ctx, triggerName)=>
+					try
+						ctx.should.eql @ctx
+						triggerName.should.eql tName
+						handleSpy.should.have.been.calledOnce.calledWithExactly( @ctx, tName, tVals )
+						done()
+					catch e
+						done( e )
+
+				@storage.on 'processedTrigger', processed
+
+				@mgr.addTrigger( @graph.id, @ctx.id, tName, tVals, 'test source' ).then =>
+					true
+				.fail (r)->
+					done( r )
 
 	describe 'Graph', ->
 		before (done)->
