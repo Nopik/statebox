@@ -1,1 +1,2 @@
 --compilers coffee:coffee-script
+--timeout 2000

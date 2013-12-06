@@ -56,11 +56,8 @@ class Storage extends events.EventEmitter
 		@processingStopRequested
 
 	handleContext: (ctx, triggerName, triggerValues)->
-		q = Q.defer()
-
-		q.resolve( ctx )
-
-		q.promise
+		ctx.trigger( triggerName, triggerValues ).then ->
+			ctx
 
 	#Methods below are stubs, showing interface
 	connect: ->

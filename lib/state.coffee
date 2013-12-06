@@ -1,12 +1,18 @@
+utils = require './utils'
+
 class State
 	constructor: (@name = '', @enterActions = [], @leaveActions = [], @flags = 0)->
 
 	hasFlag: (flag)->
 		(@flags & flag) != 0x00
 
-	leave: ->
+	enter: (ctx, values)->
+		utils.reduce @enterActions, (ea)=>
+			ea.execute( ctx, values )
 
-	enter: ->
+	leave: (ctx, values)->
+		utils.reduce @leaveActions, (ea)=>
+			ea.execute( ctx, values )
 
 	@Flags:
 		Start: 0x01

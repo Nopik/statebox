@@ -81,7 +81,7 @@ class TestStorage extends StateBox.Storage
 
 describe 'StateBox', ->
 	describe 'Manager', ->
-		before (done)->
+		beforeEach (done)->
 			@storage = new TestStorage()
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then ->
@@ -229,7 +229,7 @@ describe 'StateBox', ->
 				done( r )
 
 		describe 'Processing', ->
-			before (done)->
+			beforeEach (done)->
 				@mgr.buildGraph( '' ).then (graph)=>
 					@graph = graph
 
@@ -239,12 +239,14 @@ describe 'StateBox', ->
 						@mgr.startProcessing().then ->
 							done()
 
-			after (done)->
+			afterEach (done)->
 				@mgr.stopProcessing ->
 					done()
 
 			it 'performs processing', (done)->
 				handleSpy = sinon.spy @storage, 'handleContext'
+				ctxSpy = sinon.spy @ctx, 'trigger'
+
 				tName = 'test name'
 				tVals =
 					foo: 42
@@ -254,6 +256,7 @@ describe 'StateBox', ->
 						ctx.should.eql @ctx
 						triggerName.should.eql tName
 						handleSpy.should.have.been.calledOnce.calledWithExactly( @ctx, tName, tVals )
+						ctxSpy.should.have.been.calledOnce.calledWithExactly( tName, tVals )
 						done()
 					catch e
 						done( e )
@@ -266,7 +269,7 @@ describe 'StateBox', ->
 					done( r )
 
 	describe 'Graph', ->
-		before (done)->
+		beforeEach (done)->
 			@storage = new TestStorage()
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then ->
@@ -292,9 +295,10 @@ describe 'StateBox', ->
 				done()
 
 		##parse
+		##get next state
 
 	describe 'Context', ->
-		before (done)->
+		beforeEach (done)->
 			@storage = new TestStorage()
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
@@ -321,11 +325,59 @@ describe 'StateBox', ->
 		it 'merges initial values', ->
 			@ctx.getValue( 'foo' ).should.eql 42
 
-		##trigger
 		##enters initial state
 		##enters new state
 		##leaves current state
+		##trigger moves
 
-	#State
-		##enters
-		##leaves
+	class TestAction extends StateBox.Action
+
+	describe 'State', ->
+		beforeEach ->
+			@enterActions = [
+				new TestAction()
+				new TestAction()
+				new TestAction()
+			]
+			@leaveActions = [
+				new TestAction()
+				new TestAction()
+				new TestAction()
+			]
+			@state = new StateBox.State( 'test', @enterActions, @leaveActions )
+
+			@enterSpies = _.collect @enterActions, (ea)->
+				sinon.spy ea, 'execute'
+
+			@leaveSpies = _.collect @leaveActions, (ea)->
+				sinon.spy ea, 'execute'
+
+		it 'launches enter actions', (done)->
+			ctx = {}
+			vals = { foo: 42 }
+
+			@state.enter( ctx, vals ).then =>
+				_.each @enterSpies, (spy)->
+					spy.should.have.been.calledOnce.calledWithExactly( ctx, vals )
+
+				_.each @leaveSpies, (spy)->
+					spy.should.not.have.been.called
+
+				done()
+			.fail (r)->
+				done( r )
+
+		it 'launches leave actions', (done)->
+			ctx = {}
+			vals = { foo: 42 }
+
+			@state.leave( ctx, vals ).then =>
+				_.each @leaveSpies, (spy)->
+					spy.should.have.been.calledOnce.calledWithExactly( ctx, vals )
+
+				_.each @enterSpies, (spy)->
+					spy.should.not.have.been.called
+
+				done()
+			.fail (r)->
+				done( r )

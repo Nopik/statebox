@@ -25,4 +25,12 @@ class Graph
 				return state
 		undefined
 
+	getNextState: (stateName, triggerName)->
+		name = @edges[ stateName ]?[ triggerName ]
+
+		if name?
+			@getState( name )
+		else
+			undefined
+
 module.exports = Graph

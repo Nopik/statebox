@@ -1,6 +1,9 @@
+Q = require 'q'
+
 class Action
 	constructor: (@type, @values = {}, @label = '')->
 
-	execute: ->
+	execute: (ctx, values)->
+		Q.resolve({})
 
 module.exports = Action
