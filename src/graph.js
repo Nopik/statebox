@@ -74,21 +74,35 @@
 var parser = (function(){
 var parser = {trace: function trace() { },
 yy: {},
-symbols_: {"error":2,"E":3,"+":4,"T":5,"NAT":6,"$accept":0,"$end":1},
-terminals_: {2:"error",4:"+",6:"NAT"},
-productions_: [0,[3,3],[3,1],[5,1]],
+symbols_: {"error":2,"graph":3,"states":4,"state":5,"opt_ws":6,"STATE":7,"state_flags":8,";":9,"[":10,"flags":11,"]":12,"WORD":13,",":14,"WS":15,"$accept":0,"$end":1},
+terminals_: {2:"error",7:"STATE",9:";",10:"[",12:"]",13:"WORD",14:",",15:"WS"},
+productions_: [0,[3,1],[4,1],[4,3],[5,3],[8,0],[8,4],[11,1],[11,4],[6,0],[6,1]],
 performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */
 /**/) {
 /* this == yyval */
 
 var $0 = $$.length - 1;
 switch (yystate) {
-case 1: console.log($$[$0-3]); 
+case 1: return $$[$0]; 
+break;
+case 2: this.$ = [ $$[$0] ]; 
+break;
+case 3: this.$ = $$[$0-2].concat( [ $$[$0] ] ); 
+break;
+case 4: console.log($$[$0-1]); 
+break;
+case 5: this.$ = []; 
+break;
+case 6: this.$ = $$[$0-1]; 
+break;
+case 7: this.$ = [ $$[$0] ]; 
+break;
+case 8: this.$ = $$[$0-3].concat( [ $$[$0] ] ) 
 break;
 }
 },
-table: [{3:1,5:2,6:[1,3]},{1:[3],4:[1,4]},{1:[2,2],4:[2,2]},{1:[2,3],4:[2,3]},{5:5,6:[1,3]},{1:[2,1],4:[2,1]}],
-defaultActions: {},
+table: [{3:1,4:2,5:3,7:[1,4]},{1:[3]},{1:[2,1],6:5,7:[2,9],15:[1,6]},{1:[2,2],7:[2,2],15:[2,2]},{6:8,8:7,9:[2,5],10:[2,5],15:[1,6]},{5:9,7:[1,4]},{7:[2,10],10:[2,10],13:[2,10]},{9:[1,10]},{10:[1,11]},{1:[2,3],7:[2,3],15:[2,3]},{1:[2,4],7:[2,4],15:[2,4]},{11:12,13:[1,13]},{12:[1,14],14:[1,15]},{12:[2,7],14:[2,7]},{9:[2,6]},{6:16,13:[2,9],15:[1,6]},{13:[1,17]},{12:[2,8],14:[2,8]}],
+defaultActions: {14:[2,6]},
 parseError: function parseError(str, hash) {
     if (hash.recoverable) {
         this.trace(str);
@@ -555,16 +569,24 @@ performAction: function anonymous(yy,yy_,$avoiding_name_collisions,YY_START
 
 var YYSTATE=YY_START;
 switch($avoiding_name_collisions) {
-case 0:/* skip whitespace */
+case 0: return 15; 
 break;
-case 1:return 6;
+case 1: return 10; 
 break;
-case 2:return 4;
+case 2: return 12; 
+break;
+case 3: return 14; 
+break;
+case 4: return 9; 
+break;
+case 5: return 7; 
+break;
+case 6: return 13; 
 break;
 }
 },
-rules: [/^(?:\s+)/,/^(?:[0-9]+)/,/^(?:\+)/],
-conditions: {"INITIAL":{"rules":[0,1,2],"inclusive":true}}
+rules: [/^(?:\s+)/,/^(?:\[)/,/^(?:\])/,/^(?:,)/,/^(?:;)/,/^(?:state\b)/,/^(?:\w+)/],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6],"inclusive":true}}
 };
 return lexer;
 })();

@@ -8,6 +8,8 @@ module.exports = (grunt)->
 
 			all: [ 'test/**/*.coffee' ]
 
+			parser: [ 'test/parser.coffee' ]
+
 		jison:
 			target:
 				files:
@@ -15,8 +17,12 @@ module.exports = (grunt)->
 
 		watch:
 			test:
-				files: [ 'lib/**/*.coffee', 'test/**/*.coffee' ]
+				files: [ 'lib/**/*.coffee', 'test/**/*.coffee', 'src/**/*.coffe', 'src/**/*.js', '!src/graph.js', '!test/parser.coffee' ]
 				tasks: [ 'mochacli' ]
+
+			test_parser:
+				files: [ 'src/graph.js', 'test/parser.coffee' ]
+				tasks: [ 'mochacli:parser' ]
 
 			jison:
 				files: [ 'src/graph.jison' ]

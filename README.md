@@ -31,7 +31,7 @@ State foo [start, finish]
 		action
 
 	@timer.abc -> baz
-		? ctx.id + action.id == trigger.id
+		? ctx.id + action.foo.bar == trigger.id
 			moveTo bar
 		sendHttp
 			port: 80
@@ -40,6 +40,7 @@ State foo [start, finish]
 		!sendHttp { port: 80, method: GET, url: url } #asynchronous
 		sendHttp { port: 80, method: GET, url: url }
 		ctx.response = sendHttp { url: url }
+		ctx.a.b = [ "s", 2+3 ]
 		call my_list #positional arguments, comma separated
 
 	@timer.${id}
