@@ -11,4 +11,4 @@ _ = require 'underscore'
 
 describe 'Parser', ->
 	it 'parses', ->
-		console.log Parser.parser.parse "state [start, finish];state;"
+		console.log Parser.parser.parse "state [start, finish] { @kamil.abc { ? 2+\"ab\\\"c\"-'z'+'a\"b\"c'>3 kamil; !test; } @timer.1 {} }\nstate {}"
