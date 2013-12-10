@@ -10,8 +10,28 @@ ParseHelpers = require('./parse_helpers');
 \s+ {}
 \"(\\.|[^"])*\" { return 'STRING_LITERAL'; }
 \'(\\.|[^'])*\' { return 'STRING_LITERAL'; }
+'<<=' { return 'LEFT_ASSIGN'; }
+'>>=' { return 'RIGHT_ASSIGN'; }
 '->' { return 'TRIG_IN'; }
 '<-' { return 'TRIG_OUT'; }
+'<=' { return 'LE_OP'; }
+'>=' { return 'GE_OP'; }
+'==' { return 'EQ_OP'; }
+'!=' { return 'NE_OP'; }
+'++' { return 'INC_OP'; }
+'--' { return 'DEC_OP'; }
+'&&' { return 'AND_OP'; }
+'||' { return 'OR_OP'; }
+'<<' { return 'LEFT_OP'; }
+'>>' { return 'RIGHT_OP'; }
+'*=' { return 'MUL_ASSIGN'; }
+'/=' { return 'DIV_ASSIGN'; }
+'%=' { return 'MOD_ASSIGN'; }
+'+=' { return 'ADD_ASSIGN'; }
+'-=' { return 'SUB_ASSIGN'; }
+'&=' { return 'AND_ASSIGN'; }
+'^=' { return 'XOR_ASSIGN'; }
+'|=' { return 'OR_ASSIGN'; }
 '@' { return 'TRIG_AT'; }
 '[' { return '['; }
 ']' { return ']'; }
@@ -21,10 +41,6 @@ ParseHelpers = require('./parse_helpers');
 '}' { return '}'; }
 '<' { return '<'; }
 '>' { return '>'; }
-'<=' { return 'LE_OP'; }
-'>=' { return 'GE_OP'; }
-'==' { return 'EQ_OP'; }
-'!=' { return 'NE_OP'; }
 ',' { return ','; }
 ';' { return ';'; }
 '.' { return '.'; }
@@ -39,25 +55,8 @@ ParseHelpers = require('./parse_helpers');
 '~' { return '~'; }
 '!' { return '!'; }
 '?' { return '?'; }
-'++' { return 'INC_OP'; }
-'--' { return 'DEC_OP'; }
-'&&' { return 'AND_OP'; }
-'||' { return 'OR_OP'; }
-'<<' { return 'LEFT_OP'; }
-'>>' { return 'RIGHT_OP'; }
-'*=' { return 'MUL_ASSIGN'; }
-'/=' { return 'DIV_ASSIGN'; }
-'%=' { return 'MOD_ASSIGN'; }
-'+=' { return 'ADD_ASSIGN'; }
-'-=' { return 'SUB_ASSIGN'; }
-'<<=' { return 'LEFT_ASSIGN'; }
-'>>=' { return 'RIGHT_ASSIGN'; }
-'&=' { return 'AND_ASSIGN'; }
-'^=' { return 'XOR_ASSIGN'; }
-'|=' { return 'OR_ASSIGN'; }
 
 'state' { return 'STATE'; }
-'action' { return 'ACTION'; }
 \w+ { return 'WORD'; }
 
 [0-9]+ { return 'NUMBER'; }
@@ -211,6 +210,7 @@ logical_or_expression
 	| logical_or_expression OR_OP logical_and_expression
 	;
 
+/*
 assignment_expression
 	: logical_or_expression
 	| unary_expression assignment_operator assignment_expression
@@ -229,12 +229,9 @@ assignment_operator
 	| XOR_ASSIGN
 	| OR_ASSIGN
 	;
+*/
 
 expression
-	: assignment_expression
-	| expression ',' assignment_expression
-	;
-
-constant_expression
 	: logical_or_expression
+/*	| expression ',' logical_or_expression */
 	;
