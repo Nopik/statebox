@@ -1,3 +1,8 @@
+%{
+StateBox = require('../lib/statebox');
+ParseHelpers = require('./parse_helpers');
+%}
+
 %lex
 
 %%
@@ -70,11 +75,11 @@ states
 	: state { $$ = [ $1 ]; }
 	| states state { $$ = $1.concat( [ $2 ] ); };
 
-state : STATE state_flags '{' triggers '}' opt_semi;
+state : STATE WORD state_flags '{' triggers '}' opt_semi { $$ = new StateBox.State( $2, [], [], $3 ) };
 
-state_flags : { $$ = []; } | '[' flags ']' { $$ = $2; };
+state_flags : { $$ = 0; } | '[' flags ']' { $$ = $2; };
 
-flags : WORD { $$ = [ $1 ]; } | flags ',' WORD { $$ = $1.concat( [ $3 ] ) };
+flags : WORD { $$ = ParseHelpers.getFlag( $1 ); } | flags ',' WORD { $$ = $1 + ParseHelpers.getFlag( $3 ); };
 
 triggers
 	: { $$ = []; }
