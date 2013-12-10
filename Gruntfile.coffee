@@ -17,11 +17,11 @@ module.exports = (grunt)->
 
 		watch:
 			test:
-				files: [ 'lib/**/*.coffee', 'test/**/*.coffee', 'src/**/*.coffe', 'src/**/*.js', '!src/graph.js', '!test/parser.coffee' ]
+				files: [ 'lib/**/*.coffee', 'test/**/*.coffee', 'src/**/*.coffe', 'src/**/*.js', '!src/graph.js', '!test/parser.coffee', '!src/parse_helpers.coffee' ]
 				tasks: [ 'mochacli' ]
 
 			test_parser:
-				files: [ 'src/graph.js', 'test/parser.coffee' ]
+				files: [ 'src/graph.js', 'test/parser.coffee', 'src/parse_helpers.coffee' ]
 				tasks: [ 'mochacli:parser' ]
 
 			jison:

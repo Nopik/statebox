@@ -10,6 +10,9 @@ ParseHelpers = require('./parse_helpers');
 \s+ {}
 \"(\\.|[^"])*\" { return 'STRING_LITERAL'; }
 \'(\\.|[^'])*\' { return 'STRING_LITERAL'; }
+'->' { return 'TRIG_IN'; }
+'<-' { return 'TRIG_OUT'; }
+'@' { return 'TRIG_AT'; }
 '[' { return '['; }
 ']' { return ']'; }
 '(' { return '('; }
@@ -40,9 +43,6 @@ ParseHelpers = require('./parse_helpers');
 '--' { return 'DEC_OP'; }
 '&&' { return 'AND_OP'; }
 '||' { return 'OR_OP'; }
-'->' { return 'TRIG_IN'; }
-'<-' { return 'TRIG_OUT'; }
-'@' { return 'TRIG_AT'; }
 '<<' { return 'LEFT_OP'; }
 '>>' { return 'RIGHT_OP'; }
 '*=' { return 'MUL_ASSIGN'; }
@@ -75,20 +75,20 @@ states
 	: state { $$ = [ $1 ]; }
 	| states state { $$ = $1.concat( [ $2 ] ); };
 
-state : STATE WORD state_flags '{' triggers '}' opt_semi { $$ = new StateBox.State( $2, [], [], $3 ) };
+state : STATE WORD state_flags '{' triggers '}' opt_semi { $$ = new StateBox.State( $2, $5.enter, $5.leave, $5.at, $3 ) };
 
 state_flags : { $$ = 0; } | '[' flags ']' { $$ = $2; };
 
 flags : WORD { $$ = ParseHelpers.getFlag( $1 ); } | flags ',' WORD { $$ = $1 + ParseHelpers.getFlag( $3 ); };
 
 triggers
-	: { $$ = []; }
-	| triggers trigger { $$ = $1.concat( [ $2 ] ); };
+	: { $$ = { enter: [], leave: [], at: [] }; }
+	| triggers trigger { $$ = ParseHelpers.joinTriggers( $1, $2 ); };
 
 trigger
-	: TRIG_IN '{' actions '}'
-	| TRIG_OUT '{' actions '}'
-	| TRIG_AT identifier '{' actions '}';
+	: TRIG_IN '{' actions '}' { $$ = { enter: $3 }; }
+	| TRIG_OUT '{' actions '}' { $$ = { leave: $3 }; }
+	| TRIG_AT identifier '{' actions '}' { res = { at: { at: $2, exe: $4 } }; $$ = res; };
 
 actions
 	: { $$ = []; }
@@ -101,15 +101,15 @@ identifier
 	| identifier '.' WORD { $$ = $1.concat( [ $3 ] ) };
 
 full_action
-	: conditional action
-	| action;
+	: conditional action { $2.condition = $1; $$ = $2; }
+	| action { $$ = $1; };
 
 conditional
 	: '?' logical_or_expression;
 
 action
-	: async_specifier WORD
-	| async_specifier WORD argument_expression_list;
+	: async_specifier WORD { $$ = new StateBox.Action( $2, [], $1 ); }
+	| async_specifier WORD argument_expression_list { $$ = new StateBox.Action( $2, $3, $1 ) };
 
 async_specifier
 	: { $$ = false; }
@@ -133,8 +133,8 @@ postfix_expression
 	;
 
 argument_expression_list
-	: logical_or_expression
-	| argument_expression_list ',' logical_or_expression
+	: logical_or_expression { $$ = [ $1 ]; }
+	| argument_expression_list ',' logical_or_expression { $$ = $1.concat( [ $3 ] ) }
 	;
 
 unary_expression

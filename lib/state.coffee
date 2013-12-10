@@ -1,7 +1,7 @@
 utils = require './utils'
 
 class State
-	constructor: (@name = '', @enterActions = [], @leaveActions = [], @flags = 0)->
+	constructor: (@name = '', @enterActions = [], @leaveActions = [], @triggerActions = [], @flags = 0)->
 
 	hasFlag: (flag)->
 		(@flags & flag) != 0x00

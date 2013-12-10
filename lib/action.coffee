@@ -1,9 +1,10 @@
 Q = require 'q'
 
 class Action
-	constructor: (@type, @values = {}, @label = '')->
+	constructor: (@name, @args = [], @async = false )->
+		@condition = null
 
-	execute: (ctx, values)->
+	execute: (ctx, triggerValues)->
 		Q.resolve({})
 
 module.exports = Action

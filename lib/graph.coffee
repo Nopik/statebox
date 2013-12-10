@@ -11,10 +11,10 @@ class Graph
 		@states = {}
 		@edges = {}
 
-		@_addState 'start', [], [], State.Flags.Start
+		@_addState 'start', [], [], [], State.Flags.Start
 
-	_addState: (name, enterActions, leaveActions, flags)->
-		@states[ name ] = new State( name, enterActions, leaveActions, flags )
+	_addState: (name, enterActions, leaveActions, triggerActions, flags)->
+		@states[ name ] = new State( name, enterActions, leaveActions, triggerActions, flags )
 
 	getState: (name)->
 		@states[ name ]
