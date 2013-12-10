@@ -104,7 +104,7 @@ full_action
 	| action { $$ = $1; };
 
 conditional
-	: '?' logical_or_expression;
+	: '?' expression { $$ = $2; };
 
 action
 	: async_specifier WORD { $$ = new StateBox.Action( $2, [], $1 ); }
@@ -114,10 +114,13 @@ async_specifier
 	: { $$ = false; }
 	| '!' { $$ = true; };
 
+/* Expressions */
+
 primary_expression
 	: WORD
 	| NUMBER
 	| STRING_LITERAL
+	/* TODO: array literal, object literal */
 	| '(' expression ')'
 	;
 
@@ -132,8 +135,8 @@ postfix_expression
 	;
 
 argument_expression_list
-	: logical_or_expression { $$ = [ $1 ]; }
-	| argument_expression_list ',' logical_or_expression { $$ = $1.concat( [ $3 ] ) }
+	: expression { $$ = [ $1 ]; }
+	| argument_expression_list ',' expression { $$ = $1.concat( [ $3 ] ) }
 	;
 
 unary_expression
