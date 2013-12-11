@@ -5,6 +5,7 @@ Graph = require './graph'
 Action = require './action'
 Edge = require './edge'
 Manager = require './manager'
+Exp = require './exp'
 
 module.exports =
 	Graph: Graph
@@ -14,3 +15,4 @@ module.exports =
 	State: State
 	Action: Action
 	Edge: Edge
+	Exp: Exp

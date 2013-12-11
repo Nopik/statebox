@@ -117,19 +117,19 @@ opt_semi : | ';';
 /* Expressions */
 
 primary_expression
-	: WORD
-	| NUMBER
-	| STRING_LITERAL
+	: WORD { $$ = new StateBox.Exp.WordLiteralExp( $1 ); }
+	| NUMBER { $$ = new StateBox.Exp.NumberLiteralExp( $1 ); }
+	| STRING_LITERAL { $$ = new StateBox.Exp.StringLiteralExp( $1 ); }
 	/* TODO: array literal, object literal */
-	| '(' expression ')'
+	| '(' expression ')' { $$ = $2; }
 	;
 
 postfix_expression
-	: primary_expression
-	| postfix_expression '[' expression ']'
-	| postfix_expression '(' ')'
-	| postfix_expression '(' argument_expression_list ')'
-	| postfix_expression '.' WORD
+	: primary_expression { $$ = $1; }
+	| postfix_expression '[' expression ']' { $$ = new StateBox.Exp.SubscriptExp( $1, $2 ); }
+	| postfix_expression '(' ')' { $$ = new StateBox.Exp.CallExp( $1, [] ); }
+	| postfix_expression '(' argument_expression_list ')' { $$ = new StateBox.Exp.CallExp( $1, $3 ); }
+	| postfix_expression '.' WORD { $$ = new StateBox.Exp.PropExp( $1, $3 ); }
 	;
 
 argument_expression_list
@@ -138,80 +138,78 @@ argument_expression_list
 	;
 
 unary_expression
-	: postfix_expression
-	| unary_operator unary_expression
+	: postfix_expression { $$ = $1; }
+	| unary_operator unary_expression { $$ = new StateBox.Exp.UnaryOpExp( $1, $2 ); }
 	;
 
 unary_operator
-	: '&'
-	| '*'
-	| '+'
+	: '+'
 	| '-'
 	| '~'
 	| '!'
 	;
 
 multiplicative_expression
-	: unary_expression
-	| multiplicative_expression '*' unary_expression
-	| multiplicative_expression '/' unary_expression
-	| multiplicative_expression '%' unary_expression
+	: unary_expression { $$ = $1; }
+	| multiplicative_expression '*' unary_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
+	| multiplicative_expression '/' unary_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
+	| multiplicative_expression '%' unary_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	;
 
 additive_expression
-	: multiplicative_expression
-	| additive_expression '+' multiplicative_expression
-	| additive_expression '-' multiplicative_expression
+	: multiplicative_expression { $$ = $1; }
+	| additive_expression '+' multiplicative_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
+	| additive_expression '-' multiplicative_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	;
 
 shift_expression
-	: additive_expression
-	| shift_expression LEFT_OP additive_expression
-	| shift_expression RIGHT_OP additive_expression
+	: additive_expression { $$ = $1; }
+	| shift_expression LEFT_OP additive_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
+	| shift_expression RIGHT_OP additive_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	;
 
 relational_expression
-	: shift_expression
-	| relational_expression '<' shift_expression
-	| relational_expression '>' shift_expression
-	| relational_expression LE_OP shift_expression
-	| relational_expression GE_OP shift_expression
+	: shift_expression { $$ = $1; }
+	| relational_expression '<' shift_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
+	| relational_expression '>' shift_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
+	| relational_expression LE_OP shift_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
+	| relational_expression GE_OP shift_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	;
 
 equality_expression
-	: relational_expression
-	| equality_expression EQ_OP relational_expression
-	| equality_expression NE_OP relational_expression
+	: relational_expression { $$ = $1; }
+	| equality_expression EQ_OP relational_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
+	| equality_expression NE_OP relational_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	;
 
 and_expression
-	: equality_expression
-	| and_expression '&' equality_expression
+	: equality_expression { $$ = $1; }
+	| and_expression '&' equality_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	;
 
 exclusive_or_expression
-	: and_expression
-	| exclusive_or_expression '^' and_expression
+	: and_expression { $$ = $1; }
+	| exclusive_or_expression '^' and_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	;
 
 inclusive_or_expression
-	: exclusive_or_expression
-	| inclusive_or_expression '|' exclusive_or_expression
+	: exclusive_or_expression { $$ = $1; }
+	| inclusive_or_expression '|' exclusive_or_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	;
 
 logical_and_expression
-	: inclusive_or_expression
-	| logical_and_expression AND_OP inclusive_or_expression
+	: inclusive_or_expression { $$ = $1; }
+	| logical_and_expression AND_OP inclusive_or_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	;
 
 logical_or_expression
-	: logical_and_expression
-	| logical_or_expression OR_OP logical_and_expression
+	: logical_and_expression { $$ = $1; }
+	| logical_or_expression OR_OP logical_and_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	;
 
 assignment_expression
-	: logical_or_expression
-	| unary_expression assignment_operator assignment_expression
+	: expression { $$ = $1; }
+	| unary_expression assignment_operator assignment_expression { $$ = new StateBox.Exp.AssignmentExp( $1, $2, $3 ); }
 	;
 
 assignment_operator
@@ -229,6 +227,5 @@ assignment_operator
 	;
 
 expression
-	: logical_or_expression
-/*	| expression ',' logical_or_expression */
+	: logical_or_expression { $$ = $1; }
 	;

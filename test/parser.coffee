@@ -88,8 +88,8 @@ describe 'Parser', ->
 		s[ 1 ].async.should.eql true
 
 	it 'parses action parameters', ->
-		s = Parser.parser.parse "state x {-> { a1 a, 2+3; }}"
+		s = Parser.parser.parse "state x {-> { a1 ctx.a, 2+3, b; }}"
 		s = s[ 0 ].enterActions[ 0 ]
 		s.args.should.be.instanceOf Array
-		s.args.length.should.eql 2
-		s.args[ 0 ].should.eql 'a'
+		s.args.length.should.eql 3
+		s.args[ 2 ].should.eql { word: 'b' }
