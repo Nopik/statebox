@@ -7,6 +7,7 @@ ParseHelpers = require('./parse_helpers');
 
 %%
 
+\n\s*\#[^\n]*\n {}
 \s+ {}
 \"(\\.|[^"])*\" { return 'STRING_LITERAL'; }
 \'(\\.|[^'])*\' { return 'STRING_LITERAL'; }
@@ -18,8 +19,6 @@ ParseHelpers = require('./parse_helpers');
 '>=' { return 'GE_OP'; }
 '==' { return 'EQ_OP'; }
 '!=' { return 'NE_OP'; }
-'++' { return 'INC_OP'; }
-'--' { return 'DEC_OP'; }
 '&&' { return 'AND_OP'; }
 '||' { return 'OR_OP'; }
 '<<' { return 'LEFT_OP'; }
@@ -91,28 +90,29 @@ trigger
 
 actions
 	: { $$ = []; }
-	| actions full_action ';' { $$ = $1.concat( [ $2 ] ); };
+	| actions statement ';' { $$ = $1.concat( [ $2 ] ); };
 
-opt_semi : | ';';
-
-identifier
-	: WORD { $$ = [ $1 ]; }
-	| identifier '.' WORD { $$ = $1.concat( [ $3 ] ) };
-
-full_action
-	: conditional action { $2.condition = $1; $$ = $2; }
+statement
+	: conditional '{' actions '}' { $$ = new StateBox.Action.ConditionalAction( $1, $3 ) }
+	| '=' assignment_expression { $$ = new StateBox.Action.ExpressionAction( $2 ) }
 	| action { $$ = $1; };
 
 conditional
 	: '?' expression { $$ = $2; };
 
 action
-	: async_specifier WORD { $$ = new StateBox.Action( $2, [], $1 ); }
-	| async_specifier WORD argument_expression_list { $$ = new StateBox.Action( $2, $3, $1 ) };
+	: async_specifier WORD { $$ = new StateBox.Action.SimpleAction( $2, [], $1 ); }
+	| async_specifier WORD argument_expression_list { $$ = new StateBox.Action.SimpleAction( $2, $3, $1 ) };
 
 async_specifier
 	: { $$ = false; }
 	| '!' { $$ = true; };
+
+identifier
+	: WORD { $$ = [ $1 ]; }
+	| identifier '.' WORD { $$ = $1.concat( [ $3 ] ) };
+
+opt_semi : | ';';
 
 /* Expressions */
 
@@ -130,8 +130,6 @@ postfix_expression
 	| postfix_expression '(' ')'
 	| postfix_expression '(' argument_expression_list ')'
 	| postfix_expression '.' WORD
-	| postfix_expression INC_OP
-	| postfix_expression DEC_OP
 	;
 
 argument_expression_list
@@ -141,8 +139,6 @@ argument_expression_list
 
 unary_expression
 	: postfix_expression
-	| INC_OP unary_expression
-	| DEC_OP unary_expression
 	| unary_operator unary_expression
 	;
 
@@ -213,7 +209,6 @@ logical_or_expression
 	| logical_or_expression OR_OP logical_and_expression
 	;
 
-/*
 assignment_expression
 	: logical_or_expression
 	| unary_expression assignment_operator assignment_expression
@@ -232,7 +227,6 @@ assignment_operator
 	| XOR_ASSIGN
 	| OR_ASSIGN
 	;
-*/
 
 expression
 	: logical_or_expression

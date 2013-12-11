@@ -1,10 +1,26 @@
 Q = require 'q'
 
-class Action
+class SimpleAction
 	constructor: (@name, @args = [], @async = false )->
-		@condition = null
 
 	execute: (ctx, triggerValues)->
 		Q.resolve({})
 
-module.exports = Action
+class ConditionalAction
+	constructor: (@condition, @actions)->
+
+	execute: (ctx, triggerValues)->
+		#TODO: check condition, execute all actions
+		Q.resolve({})
+
+class ExpressionAction
+	constructor: (@expression)->
+
+	execute: (ctx, triggerValues)->
+		#TODO: calculate expression
+		Q.resolve({})
+
+module.exports =
+	SimpleAction: SimpleAction
+	ConditionalAction: ConditionalAction
+	ExpressionAction: ExpressionAction

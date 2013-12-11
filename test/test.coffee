@@ -330,7 +330,7 @@ describe 'StateBox', ->
 		##leaves current state
 		##trigger moves
 
-	class TestAction extends StateBox.Action
+	class TestAction extends StateBox.Action.SimpleAction
 
 	describe 'State', ->
 		beforeEach ->

@@ -12,7 +12,7 @@ _ = require 'underscore'
 
 describe 'Parser', ->
 	it 'parses', ->
-		s = Parser.parser.parse "state start [start, finish] { @kamil.abc { ? 2+\"ab\\\"c\"-'z'+'a\"b\"c'>3 kamil; !test; } @timer.1 {} }\nstate last {}"
+		s = Parser.parser.parse "state start [start, finish] { @kamil.abc { ? 2+\"ab\\\"c\"-'z'+'a\"b\"c'>3 { kamil; }; !test; } @timer.1 {} }\nstate last {}"
 		s.should.be.instanceOf Array
 		s.length.should.eql 2
 		s[ 0 ].should.be.instanceOf StateBox.State
@@ -41,6 +41,14 @@ describe 'Parser', ->
 			Parser.parser.parse "state e [error] {}"
 		).should.throw( 'Unknown flag: error' )
 
+	it 'ignores comments', ->
+		(-> Parser.parser.parse "state x\nabc\n{}").should.throw()
+
+		s = Parser.parser.parse "state x\n#abc{\n{}"
+		s.should.be.instanceOf Array
+		s.length.should.eql 1
+		s[0].name.should.eql 'x'
+
 	it 'parses triggers', ->
 		s = Parser.parser.parse "state x {}"
 		s[0].enterActions.should.eql []
@@ -67,8 +75,8 @@ describe 'Parser', ->
 		s = s[ 0 ].enterActions
 		s.should.be.instanceOf Array
 		s.length.should.eql 2
-		s[ 0 ].should.be.instanceOf StateBox.Action
-		s[ 1 ].should.be.instanceOf StateBox.Action
+		s[ 0 ].should.be.instanceOf StateBox.Action.SimpleAction
+		s[ 1 ].should.be.instanceOf StateBox.Action.SimpleAction
 
 		s[ 0 ].name.should.eql 'a1'
 		s[ 1 ].name.should.eql 'a2'
@@ -78,9 +86,6 @@ describe 'Parser', ->
 
 		s[ 0 ].async.should.eql false
 		s[ 1 ].async.should.eql true
-
-		should.not.exist s[ 0 ].condition
-		should.not.exist s[ 1 ].condition
 
 	it 'parses action parameters', ->
 		s = Parser.parser.parse "state x {-> { a1 a, 2+3; }}"
