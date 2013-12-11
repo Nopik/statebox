@@ -1,3 +1,4 @@
+Q = require 'q'
 utils = require './utils'
 
 class State
@@ -13,6 +14,25 @@ class State
 	leave: (ctx, values)->
 		utils.reduce @leaveActions, (ea)=>
 			ea.execute( ctx, values )
+
+	runTrigger: (ctx, name, values)->
+		triggerAction = @_findTriggerAction( name )
+
+		if triggerAction?
+			q = utils.reduce triggerAction.exe, (ea)=>
+				ea.execute( ctx, values )
+
+			q.then ->
+				triggerAction.to
+		else
+			Q.reject({})
+
+	_findTriggerAction: (name)->
+		for triggerAction in @triggerActions
+			if triggerAction.at == name
+				return triggerAction
+
+		undefined
 
 	@Flags:
 		Start: 0x01

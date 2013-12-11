@@ -24,7 +24,7 @@ class Context
 				Q.resolve({})
 			else
 				@status = Context.Status.Failed
-				Q.reject({})
+				Q.reject( new Error( "Graph has no start state" ) )
 
 	abort: ->
 		@status = Context.Status.Aborted
@@ -34,9 +34,12 @@ class Context
 
 	trigger: (name, values)->
 		@storage.getGraph( @graph_id ).then (graph)=>
-			nextState = graph.getNextState @_getCurrentState(), name
-			if nextState?
-				@_moveToState( values )
+			cs = @_getCurrentState()
+
+			cs.runTrigger( this, name, values ).then (nextStateName)=>
+				nextState = graph.getState( nextStateName )
+				if nextState?
+					@_moveToState( nextState, values )
 
 	getValue: (name)->
 		@values[ name ]

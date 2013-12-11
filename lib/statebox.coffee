@@ -3,7 +3,6 @@ Storage = require './storage'
 State = require './state'
 Graph = require './graph'
 Action = require './action'
-Edge = require './edge'
 Manager = require './manager'
 Exp = require './exp'
 
@@ -14,5 +13,4 @@ module.exports =
 	Storage: Storage
 	State: State
 	Action: Action
-	Edge: Edge
 	Exp: Exp

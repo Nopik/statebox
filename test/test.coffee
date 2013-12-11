@@ -100,7 +100,7 @@ describe 'StateBox', ->
 		it 'persists graph', (done)->
 			saveSpy = sinon.spy @storage, 'saveGraph'
 			destroySpy = sinon.spy @storage, 'destroyGraph'
-			@mgr.buildGraph( '' ).then (graph)=>
+			@mgr.buildGraph( 'state a {}' ).then (graph)=>
 				id = graph.id
 				graph.destroy().then =>
 					destroySpy.should.have.been.calledOnce.calledWithExactly( id )
@@ -109,7 +109,7 @@ describe 'StateBox', ->
 				done( r )
 
 		it 'destroys graph', (done)->
-			@mgr.buildGraph( '' ).then (graph)=>
+			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
 				getSpy = sinon.spy @storage, 'getGraph'
 				id = graph.id
 				@mgr.getGraph( id ).then (g1)=>
@@ -129,7 +129,7 @@ describe 'StateBox', ->
 				graphs.should.be.an.instanceOf Array
 				graphs.length.should.eql 0
 
-				@mgr.buildGraph( '' ).then (graph)=>
+				@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
 					@mgr.getGraphs().then (graphs)=>
 						getSpy.should.have.been.calledTwice.always.calledWithExactly()
 						graphs.should.be.an.instanceOf Array
@@ -144,7 +144,7 @@ describe 'StateBox', ->
 			getContextsSpy = sinon.spy @storage, 'getContexts'
 			updateContextSpy = sinon.spy @storage, 'updateContext'
 
-			@mgr.buildGraph( '' ).then (graph)=>
+			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
 				@mgr.getContexts( graph.id ).then (ctxs0)=>
 					ctxs0.should.be.an.instanceOf Array
 					ctxs0.length.should.eql 0
@@ -192,7 +192,7 @@ describe 'StateBox', ->
 		it 'adds trigger', (done)->
 			addSpy = sinon.spy @storage, 'addTrigger'
 
-			@mgr.buildGraph( '' ).then (graph)=>
+			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
 				@mgr.runGraph( graph.id ).then (ctx)=>
 					@mgr.addTrigger( graph.id, ctx.id, 'test_trigger', { test: 1 }, 'test' ).then =>
 						addSpy.should.have.been.calledOnce.calledWithExactly graph.id, ctx.id, 'test_trigger', { test: 1 }, 'test'
@@ -230,7 +230,7 @@ describe 'StateBox', ->
 
 		describe 'Processing', ->
 			beforeEach (done)->
-				@mgr.buildGraph( '' ).then (graph)=>
+				@mgr.buildGraph( 'state a[start] { @test.name {} }' ).then (graph)=>
 					@graph = graph
 
 					@mgr.runGraph( @graph.id ).then (ctx)=>
@@ -238,6 +238,8 @@ describe 'StateBox', ->
 
 						@mgr.startProcessing().then ->
 							done()
+				.fail (r)->
+					done( r )
 
 			afterEach (done)->
 				@mgr.stopProcessing ->
@@ -247,7 +249,7 @@ describe 'StateBox', ->
 				handleSpy = sinon.spy @storage, 'handleContext'
 				ctxSpy = sinon.spy @ctx, 'trigger'
 
-				tName = 'test name'
+				tName = 'test.name'
 				tVals =
 					foo: 42
 
@@ -276,33 +278,30 @@ describe 'StateBox', ->
 				done()
 
 		it 'builds graph', (done)->
-			@mgr.buildGraph( '' ).then (graph)->
+			@mgr.buildGraph( 'state a[start] {}' ).then (graph)->
 				should.exist graph
 				done()
 
 		it 'graphs have start node', (done)->
-			@mgr.buildGraph( '' ).then (graph)=>
+			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
 				ss = graph.getStartState()
 				should.exist ss
 				ss.hasFlag( StateBox.State.Flags.Start ).should.eql true
 				done()
 
 		it 'allows get state by name', (done)->
-			@mgr.buildGraph( '' ).then (graph)=>
-				ss = graph.getState( 'start' )
+			@mgr.buildGraph( 'state foo[start] {}' ).then (graph)=>
+				ss = graph.getState( 'foo' )
 				should.exist ss
-				ss.name.should.eql 'start'
+				ss.name.should.eql 'foo'
 				done()
-
-		##parse
-		##get next state
 
 	describe 'Context', ->
 		beforeEach (done)->
 			@storage = new TestStorage()
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
-				@mgr.buildGraph( '' ).then (graph)=>
+				@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
 					@graph = graph
 
 					@mgr.runGraph( graph.id, { foo: 42 } ).then (ctx)=>

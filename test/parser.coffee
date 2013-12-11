@@ -65,10 +65,31 @@ describe 'Parser', ->
 		s[0].leaveActions.should.eql []
 		s[0].triggerActions.should.eql []
 
+		s = Parser.parser.parse "state x {->{a;}}"
+		s[0].enterActions.length.should.eql 1
+		s[0].enterActions[ 0 ].should.be.instanceOf StateBox.Action.SimpleAction
+		s[0].enterActions[ 0 ].name.should.eql 'a'
+		s[0].enterActions[ 0 ].args.should.eql []
+		s[0].leaveActions.should.eql []
+		s[0].triggerActions.should.eql []
+
+		s = Parser.parser.parse "state x {<-{a;}}"
+		s[0].enterActions.should.eql []
+		s[0].leaveActions.length.should.eql 1
+		s[0].leaveActions[ 0 ].should.be.instanceOf StateBox.Action.SimpleAction
+		s[0].leaveActions[ 0 ].name.should.eql 'a'
+		s[0].leaveActions[ 0 ].args.should.eql []
+		s[0].triggerActions.should.eql []
+
 		s = Parser.parser.parse "state x {@t.e.s.t {}}"
 		s[0].enterActions.should.eql []
 		s[0].leaveActions.should.eql []
-		s[0].triggerActions.should.eql [ { at: [ 't', 'e', 's', 't' ], exe: [] } ]
+		s[0].triggerActions.should.eql [ { at: 't.e.s.t', exe: [], to: undefined } ]
+
+		s = Parser.parser.parse "state x {@t.e.s.t -> y {}}"
+		s[0].enterActions.should.eql []
+		s[0].leaveActions.should.eql []
+		s[0].triggerActions.should.eql [ { at: 't.e.s.t', exe: [], to: 'y' } ]
 
 	it 'parses actions', ->
 		s = Parser.parser.parse "state x {-> { a1; !a2; }}"

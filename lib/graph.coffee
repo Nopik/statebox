@@ -1,36 +1,23 @@
 State = require './state'
+Parser = require '../src/graph'
 
 class Graph
 	constructor: (@source, @storage)->
-		@_parse()
+		@states = Parser.parser.parse @source
 
 	destroy: ->
 		@storage.destroyGraph( @id )
 
-	_parse: ->
-		@states = {}
-		@edges = {}
-
-		@_addState 'start', [], [], [], State.Flags.Start
-
-	_addState: (name, enterActions, leaveActions, triggerActions, flags)->
-		@states[ name ] = new State( name, enterActions, leaveActions, triggerActions, flags )
-
 	getState: (name)->
-		@states[ name ]
-
-	getStartState: ->
-		for name, state of @states
-			if state.hasFlag( State.Flags.Start )
+		for state in @states
+			if state.name == name
 				return state
 		undefined
 
-	getNextState: (stateName, triggerName)->
-		name = @edges[ stateName ]?[ triggerName ]
-
-		if name?
-			@getState( name )
-		else
-			undefined
+	getStartState: ->
+		for state in @states
+			if state.hasFlag( State.Flags.Start )
+				return state
+		undefined
 
 module.exports = Graph
