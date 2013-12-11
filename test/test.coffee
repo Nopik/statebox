@@ -229,7 +229,29 @@ describe 'StateBox', ->
 
 		describe 'Processing', ->
 			beforeEach (done)->
-				@mgr.buildGraph( 'state a[start] { @test.name {}; @b -> b; }; state b { @a -> a; };' ).then (graph)=>
+				source = """
+					state a[start]
+					{
+						-> { s1; };
+
+						<- { s2; };
+
+						@test.name {};
+
+						@b -> b { a1; };
+					};
+
+					state b
+					{
+						-> { s3; };
+
+						<- { s4; };
+
+						@a -> a { a2; };
+					};
+"""
+
+				@mgr.buildGraph( source ).then (graph)=>
 					@graph = graph
 
 					@mgr.runGraph( @graph.id ).then (ctx)=>
@@ -271,20 +293,46 @@ describe 'StateBox', ->
 
 			it 'changes states', (done)->
 				step = 0
+				vals = { bar: 42 }
+
+				aSpy = sinon.spy @graph.getState( 'a' ).findTriggerAction( 'b' ).exe[ 0 ], 'execute'
+				bSpy = sinon.spy @graph.getState( 'b' ).findTriggerAction( 'a' ).exe[ 0 ], 'execute'
+
+				aeSpy = sinon.spy @graph.getState( 'a' ).enterActions[0], 'execute'
+				alSpy = sinon.spy @graph.getState( 'a' ).leaveActions[0], 'execute'
+				beSpy = sinon.spy @graph.getState( 'b' ).enterActions[0], 'execute'
+				blSpy = sinon.spy @graph.getState( 'b' ).leaveActions[0], 'execute'
 
 				@storage.on 'processedTrigger', (ctx, name)=>
-					if step == 0
-						name.should.eql 'b'
-						@ctx.getValue( StateBox.Context.StateValueName ).name.should.eql 'b'
-						step = 1
-						@mgr.addTrigger( @graph.id, @ctx.id, 'a', {}, '' ).then =>
-							true
-					else
-						if step == 1
-							@ctx.getValue( StateBox.Context.StateValueName ).name.should.eql 'a'
-							done()
+					try
+						if step == 0
+							aeSpy.should.have.not.been.called
+							alSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
+							beSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
+							blSpy.should.have.not.been.called
 
-				@mgr.addTrigger( @graph.id, @ctx.id, 'b', {}, '' ).then =>
+							name.should.eql 'b'
+							@ctx.getValue( StateBox.Context.StateValueName ).name.should.eql 'b'
+							step = 1
+							@mgr.addTrigger( @graph.id, @ctx.id, 'a', vals, '' ).then =>
+								true
+						else
+							if step == 1
+								aSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
+								bSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
+
+								aeSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
+								alSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
+								beSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
+								blSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
+
+								@ctx.getValue( StateBox.Context.StateValueName ).name.should.eql 'a'
+								done()
+					catch e
+						step = -1
+						done( e )
+
+				@mgr.addTrigger( @graph.id, @ctx.id, 'b', vals, '' ).then =>
 					true
 
 	describe 'Graph', ->
@@ -318,7 +366,7 @@ describe 'StateBox', ->
 			@storage = new TestStorage()
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
-				@mgr.buildGraph( 'state a[start] { @b -> b; } state b { @a -> a; }' ).then (graph)=>
+				@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
 					@graph = graph
 
 					@mgr.runGraph( graph.id, { foo: 42 } ).then (ctx)=>
@@ -342,11 +390,6 @@ describe 'StateBox', ->
 
 		it 'merges initial values', ->
 			@ctx.getValue( 'foo' ).should.eql 42
-
-		##enters initial state
-		##enters new state
-		##leaves current state
-		##trigger moves
 
 	class TestAction extends StateBox.Action.SimpleAction
 

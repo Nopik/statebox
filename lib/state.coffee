@@ -16,7 +16,7 @@ class State
 			ea.execute( ctx, values )
 
 	runTrigger: (ctx, name, values)->
-		triggerAction = @_findTriggerAction( name )
+		triggerAction = @findTriggerAction( name )
 
 		if triggerAction?
 			q = utils.reduce triggerAction.exe, (ea)=>
@@ -27,7 +27,7 @@ class State
 		else
 			Q.reject({})
 
-	_findTriggerAction: (name)->
+	findTriggerAction: (name)->
 		for triggerAction in @triggerActions
 			if triggerAction.at == name
 				return triggerAction
