@@ -27,7 +27,6 @@ class TestStorage extends StateBox.Storage
 		Q.resolve graph
 
 	getGraphs: ()->
-		@get_graphs_calls++
 		Q.resolve _.values @graphs
 
 	getGraph: (graph_id)->
@@ -230,7 +229,7 @@ describe 'StateBox', ->
 
 		describe 'Processing', ->
 			beforeEach (done)->
-				@mgr.buildGraph( 'state a[start] { @test.name {} }' ).then (graph)=>
+				@mgr.buildGraph( 'state a[start] { @test.name {}; @b -> b; }; state b { @a -> a; };' ).then (graph)=>
 					@graph = graph
 
 					@mgr.runGraph( @graph.id ).then (ctx)=>
@@ -270,6 +269,24 @@ describe 'StateBox', ->
 				.fail (r)->
 					done( r )
 
+			it 'changes states', (done)->
+				step = 0
+
+				@storage.on 'processedTrigger', (ctx, name)=>
+					if step == 0
+						name.should.eql 'b'
+						@ctx.getValue( StateBox.Context.StateValueName ).name.should.eql 'b'
+						step = 1
+						@mgr.addTrigger( @graph.id, @ctx.id, 'a', {}, '' ).then =>
+							true
+					else
+						if step == 1
+							@ctx.getValue( StateBox.Context.StateValueName ).name.should.eql 'a'
+							done()
+
+				@mgr.addTrigger( @graph.id, @ctx.id, 'b', {}, '' ).then =>
+					true
+
 	describe 'Graph', ->
 		beforeEach (done)->
 			@storage = new TestStorage()
@@ -301,12 +318,14 @@ describe 'StateBox', ->
 			@storage = new TestStorage()
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
-				@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
+				@mgr.buildGraph( 'state a[start] { @b -> b; } state b { @a -> a; }' ).then (graph)=>
 					@graph = graph
 
 					@mgr.runGraph( graph.id, { foo: 42 } ).then (ctx)=>
 						@ctx = ctx
 						done()
+			.fail (r)->
+				done( r )
 
 		it 'chooses initial state', ->
 			ss = @graph.getStartState()

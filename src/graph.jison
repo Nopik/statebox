@@ -81,13 +81,14 @@ flags : WORD { $$ = ParseHelpers.getFlag( $1 ); } | flags ',' WORD { $$ = $1 + P
 
 triggers
 	: { $$ = { enter: [], leave: [], at: [] }; }
-	| triggers trigger { $$ = ParseHelpers.joinTriggers( $1, $2 ); };
+	| triggers trigger opt_semi { $$ = ParseHelpers.joinTriggers( $1, $2 ); };
 
 trigger
 	: TRIG_IN '{' actions '}' { $$ = { enter: $3 }; }
 	| TRIG_OUT '{' actions '}' { $$ = { leave: $3 }; }
 	| TRIG_AT identifier '{' actions '}' { $$ = { at: { at: $2, exe: $4, to: undefined } }; }
-	| TRIG_AT identifier TRIG_IN WORD '{' actions '}' { $$ = { at: { at: $2, exe: $6, to: $4 } }; };
+	| TRIG_AT identifier TRIG_IN WORD '{' actions '}' { $$ = { at: { at: $2, exe: $6, to: $4 } }; }
+	| TRIG_AT identifier TRIG_IN WORD { $$ = { at: { at: $2, exe: [], to: $4 } }; };
 
 actions
 	: { $$ = []; }
