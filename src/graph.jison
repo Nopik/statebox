@@ -7,10 +7,10 @@ ParseHelpers = require('./parse_helpers');
 
 %%
 
-\n\s*\#[^\n]*\n {}
 \s+ {}
 \"(\\.|[^"])*\" { return 'STRING_LITERAL'; }
 \'(\\.|[^'])*\' { return 'STRING_LITERAL'; }
+\#[^\n]*\n {}
 '<<=' { return 'LEFT_ASSIGN'; }
 '>>=' { return 'RIGHT_ASSIGN'; }
 '->' { return 'TRIG_IN'; }
