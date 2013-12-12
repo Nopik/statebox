@@ -17,7 +17,9 @@ ParseHelpers = require('./parse_helpers');
 '<-' { return 'TRIG_OUT'; }
 '<=' { return 'LE_OP'; }
 '>=' { return 'GE_OP'; }
+'===' { return 'EQQ_OP'; }
 '==' { return 'EQ_OP'; }
+'!==' { return 'NEE_OP'; }
 '!=' { return 'NE_OP'; }
 '&&' { return 'AND_OP'; }
 '||' { return 'OR_OP'; }
@@ -43,6 +45,7 @@ ParseHelpers = require('./parse_helpers');
 ',' { return ','; }
 ';' { return ';'; }
 '.' { return '.'; }
+'=' { return '='; }
 '&' { return '&'; }
 '|' { return '|'; }
 '^' { return '^'; }
@@ -56,9 +59,8 @@ ParseHelpers = require('./parse_helpers');
 '?' { return '?'; }
 
 'state' { return 'STATE'; }
-\w+ { return 'WORD'; }
-
 [0-9]+ { return 'NUMBER'; }
+\w+ { return 'WORD'; }
 
 /lex
 
@@ -92,12 +94,12 @@ trigger
 
 actions
 	: { $$ = []; }
-	| actions statement ';' { $$ = $1.concat( [ $2 ] ); };
+	| actions statement { $$ = $1.concat( [ $2 ] ); };
 
 statement
-	: conditional '{' actions '}' { $$ = new StateBox.Action.ConditionalAction( $1, $3 ) }
-	| '=' assignment_expression { $$ = new StateBox.Action.ExpressionAction( $2 ) }
-	| action { $$ = $1; };
+	: conditional '{' actions '}' opt_semi { $$ = new StateBox.Action.ConditionalAction( $1, $3 ) }
+	| '=' assignment_expression ';' { $$ = new StateBox.Action.ExpressionAction( $2 ) }
+	| action ';' { $$ = $1; };
 
 conditional
 	: '?' expression { $$ = $2; };
@@ -112,6 +114,8 @@ async_specifier
 
 identifier
 	: WORD { $$ = $1; }
+	| NUMBER { $$ = $1; }
+	| identifier '.' NUMBER { $$ = $1 + "." + $3; }
 	| identifier '.' WORD { $$ = $1 + "." + $3; };
 
 opt_semi : | ';';
@@ -128,7 +132,7 @@ primary_expression
 
 postfix_expression
 	: primary_expression { $$ = $1; }
-	| postfix_expression '[' expression ']' { $$ = new StateBox.Exp.SubscriptExp( $1, $2 ); }
+	| postfix_expression '[' expression ']' { $$ = new StateBox.Exp.SubscriptExp( $1, $3 ); }
 	| postfix_expression '(' ')' { $$ = new StateBox.Exp.CallExp( $1, [] ); }
 	| postfix_expression '(' argument_expression_list ')' { $$ = new StateBox.Exp.CallExp( $1, $3 ); }
 	| postfix_expression '.' WORD { $$ = new StateBox.Exp.PropExp( $1, $3 ); }
@@ -181,7 +185,9 @@ relational_expression
 equality_expression
 	: relational_expression { $$ = $1; }
 	| equality_expression EQ_OP relational_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
+	| equality_expression EQQ_OP relational_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	| equality_expression NE_OP relational_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
+	| equality_expression NEE_OP relational_expression { $$ = new StateBox.Exp.OpExp( $1, $2, $3 ); }
 	;
 
 and_expression

@@ -1,3 +1,5 @@
+util = require 'util'
+utils = require './utils'
 Q = require 'q'
 
 class SimpleAction
@@ -10,14 +12,18 @@ class ConditionalAction
 	constructor: (@condition, @actions)->
 
 	execute: (ctx, triggerValues)->
-		#TODO: check condition, execute all actions
-		Q.resolve({})
+		if @condition.evaluate( ctx, triggerValues ) == true
+			utils.reduce @actions, (ea)=>
+				ea.execute( ctx, triggerValues )
+		else
+			Q.resolve({})
 
 class ExpressionAction
 	constructor: (@expression)->
 
 	execute: (ctx, triggerValues)->
-		#TODO: calculate expression
+		@expression.evaluate( ctx, triggerValues )
+
 		Q.resolve({})
 
 module.exports =

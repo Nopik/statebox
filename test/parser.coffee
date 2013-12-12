@@ -18,6 +18,10 @@ describe 'Parser', ->
 		s[ 0 ].should.be.instanceOf StateBox.State
 		s[ 1 ].should.be.instanceOf StateBox.State
 
+	it 'cant access property on invalid object', ->
+#		(->Parser.parser.parse "state test { -> { ? a.x { z; } } }").should.throw( "Unknown object: a, use 'ctx' or 'trigger'" )
+		(->Parser.parser.parse "state test { -> { ? ctx.x { z; } } }").should.not.throw()
+
 	it 'parses flags', ->
 		s = Parser.parser.parse "state s [start] {}"
 		s.should.be.instanceOf Array
@@ -45,6 +49,16 @@ describe 'Parser', ->
 		(-> Parser.parser.parse "state x\nabc\n{}").should.throw()
 
 		s = Parser.parser.parse "state x\n#abc{\n{}"
+		s.should.be.instanceOf Array
+		s.length.should.eql 1
+		s[0].name.should.eql 'x'
+
+		s = Parser.parser.parse "state x\n#a'b'c{\n{}"
+		s.should.be.instanceOf Array
+		s.length.should.eql 1
+		s[0].name.should.eql 'x'
+
+		s = Parser.parser.parse "state x\n#a\"b\"c{\n{}"
 		s.should.be.instanceOf Array
 		s.length.should.eql 1
 		s[0].name.should.eql 'x'
@@ -109,8 +123,9 @@ describe 'Parser', ->
 		s[ 1 ].async.should.eql true
 
 	it 'parses action parameters', ->
-		s = Parser.parser.parse "state x {-> { a1 ctx.a, 2+3, b; }}"
+		s = Parser.parser.parse "state x {-> { a1 ctx.a, 2+3, ctx; }}"
 		s = s[ 0 ].enterActions[ 0 ]
 		s.args.should.be.instanceOf Array
 		s.args.length.should.eql 3
-		s.args[ 2 ].should.eql { word: 'b' }
+		s.args[ 2 ].should.be.instanceOf StateBox.Exp.WordLiteralExp
+		s.args[ 2 ].word.should.eql 'ctx'

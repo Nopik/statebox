@@ -1,4 +1,5 @@
 State = require './state'
+Values = require './values'
 Q = require 'q'
 
 class Context
@@ -10,8 +11,9 @@ class Context
 		Failed: 3
 		Aborted: 4
 
-	constructor: (@graph_id, @storage, @values = {})->
-		@values ?= {}
+	constructor: (@graph_id, @storage, values = {})->
+		values ?= {}
+		@values = new Values.Holder values
 		@status = Context.Status.Active
 		@setValue Context.StateValueName, null
 
@@ -36,16 +38,18 @@ class Context
 		@storage.getGraph( @graph_id ).then (graph)=>
 			cs = @_getCurrentState()
 
+			values = new Values.Holder values
 			cs.runTrigger( this, name, values ).then (nextStateName)=>
-				nextState = graph.getState( nextStateName )
-				if nextState?
-					@_moveToState( nextState, values )
+				if nextStateName?
+					nextState = graph.getState( nextStateName )
+					if nextState?
+						@_moveToState( nextState, values )
 
 	getValue: (name)->
-		@values[ name ]
+		@values.get name
 
 	setValue: (name, value)->
-		@values[ name ] = value
+		@values.set name, value
 
 	_moveToState: (state, values = {})->
 		cs = @_getCurrentState()

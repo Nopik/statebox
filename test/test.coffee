@@ -2,10 +2,33 @@ chai = require 'chai'
 sinon = require 'sinon'
 chai.use require 'sinon-chai'
 should = chai.should()
+util = require 'util'
+utils = require '../lib/utils'
 
 StateBox = require '../lib/statebox'
 _ = require 'underscore'
 Q = require 'q'
+
+waitForTriggers = (storage, fs, done)->
+	lock = Q.defer()
+	q = utils.reduce fs, (f)=>
+		lock.promise.then (memo)->
+			lock = Q.defer()
+			f( memo.ctx, memo.name )
+
+	q.then ->
+		done()
+	, (r)->
+		done( r )
+
+	processed = (ctx, triggerName)=>
+		lock.resolve( { ctx: ctx, name: triggerName } )
+
+	storage.on 'processedTrigger', processed
+
+sendTriggers = (mgr, graphId, ctxId, triggers)->
+	utils.reduce triggers, (trigger)->
+		mgr.addTrigger( graphId, ctxId, trigger[ 0 ], trigger[ 1 ], '' )
 
 class TestStorage extends StateBox.Storage
 	constructor: ->
@@ -294,6 +317,7 @@ describe 'StateBox', ->
 			it 'changes states', (done)->
 				step = 0
 				vals = { bar: 42 }
+				valsh = new StateBox.Values.Holder vals
 
 				aSpy = sinon.spy @graph.getState( 'a' ).findTriggerAction( 'b' ).exe[ 0 ], 'execute'
 				bSpy = sinon.spy @graph.getState( 'b' ).findTriggerAction( 'a' ).exe[ 0 ], 'execute'
@@ -307,8 +331,8 @@ describe 'StateBox', ->
 					try
 						if step == 0
 							aeSpy.should.have.not.been.called
-							alSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
-							beSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
+							alSpy.should.have.been.calledOnce.calledWithExactly( @ctx, valsh )
+							beSpy.should.have.been.calledOnce.calledWithExactly( @ctx, valsh )
 							blSpy.should.have.not.been.called
 
 							name.should.eql 'b'
@@ -318,13 +342,13 @@ describe 'StateBox', ->
 								true
 						else
 							if step == 1
-								aSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
-								bSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
+								aSpy.should.have.been.calledOnce.calledWithExactly( @ctx, valsh )
+								bSpy.should.have.been.calledOnce.calledWithExactly( @ctx, valsh )
 
-								aeSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
-								alSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
-								beSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
-								blSpy.should.have.been.calledOnce.calledWithExactly( @ctx, vals )
+								aeSpy.should.have.been.calledOnce.calledWithExactly( @ctx, valsh )
+								alSpy.should.have.been.calledOnce.calledWithExactly( @ctx, valsh )
+								beSpy.should.have.been.calledOnce.calledWithExactly( @ctx, valsh )
+								blSpy.should.have.been.calledOnce.calledWithExactly( @ctx, valsh )
 
 								@ctx.getValue( StateBox.Context.StateValueName ).name.should.eql 'a'
 								done()
@@ -442,3 +466,137 @@ describe 'StateBox', ->
 				done()
 			.fail (r)->
 				done( r )
+
+	describe 'Action', ->
+		beforeEach (done)->
+			@storage = new TestStorage()
+			@mgr = new StateBox.Manager( @storage )
+			@mgr.init().then =>
+				source = """
+          state a[start]
+          {
+            @a {
+              a1;
+              ? (2+3 > 4) && (5 > -5) {
+                a2a;
+              }
+
+              ? (2+3 > 5) && (5 > -5) {
+                a2b;
+              }
+
+              ? trigger.foo + ctx.bar == 50 {
+                a3;
+              }
+
+              ? trigger.bar[ 0 ] == "baz" {
+                a4;
+              }
+
+              ? exist( trigger.qux ) == true {
+                a5;
+              }
+
+              = ctx.quuz = 17;
+              = ctx.quuz += 25;
+            }
+          }
+"""
+				@mgr.buildGraph( source ).then (graph)=>
+					@graph = graph
+
+					@mgr.runGraph( graph.id, { bar: 8 } ).then (ctx)=>
+						@ctx = ctx
+
+						@mgr.startProcessing().then ->
+							done()
+			.fail (r)->
+				done( r )
+
+		afterEach (done)->
+			@mgr.stopProcessing ->
+				done()
+
+		it 'gets called', (done)->
+			vals1 =
+				foo: 42
+				bar: [ 'baz' ]
+				qux: true
+
+			vals2 =
+				foo: 1
+				bar: [ 'bazz' ]
+
+			vals1h = new StateBox.Values.Holder vals1
+			vals2h = new StateBox.Values.Holder vals2
+
+			a1Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 0 ], 'execute'
+			a20Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 1 ], 'execute'
+			a21Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 1 ].actions[ 0 ], 'execute'
+			a22Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 2 ], 'execute'
+			a23Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 2 ].actions[ 0 ], 'execute'
+			a30Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 3 ], 'execute'
+			a31Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 3 ].actions[ 0 ], 'execute'
+			a40Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 4 ], 'execute'
+			a41Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 4 ].actions[ 0 ], 'execute'
+			a50Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 5 ], 'execute'
+			a51Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 5 ].actions[ 0 ], 'execute'
+			a6Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 6 ], 'execute'
+			a7Spy = sinon.spy @graph.states[0].triggerActions[0].exe[ 7 ], 'execute'
+
+			fs = [
+				(ctx, name)=>
+					a1Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+					a20Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+					a21Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+					a22Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+					a23Spy.should.have.not.been.called
+					a30Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+					a31Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+					a40Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+					a41Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+					a50Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+					a51Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+					a6Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+					a7Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
+
+					v = ctx.getValue( 'quuz' )
+					should.exist v
+					v.should.eql 42
+
+					a1Spy.reset()
+					a20Spy.reset()
+					a21Spy.reset()
+					a22Spy.reset()
+					a23Spy.reset()
+					a30Spy.reset()
+					a31Spy.reset()
+					a40Spy.reset()
+					a41Spy.reset()
+					a50Spy.reset()
+					a51Spy.reset()
+					a6Spy.reset()
+					a7Spy.reset()
+
+				(ctx, name)=>
+					a1Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals2h )
+					a20Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals2h )
+					a21Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals2h )
+					a22Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals2h )
+					a23Spy.should.have.not.been.called
+					a30Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals2h )
+					a31Spy.should.have.not.been.called
+					a40Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals2h )
+					a41Spy.should.have.not.been.called
+					a50Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals2h )
+					a51Spy.should.have.not.been.called
+					a6Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals2h )
+					a7Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals2h )
+			]
+
+			waitForTriggers @storage, fs, done
+
+			sendTriggers @mgr, @graph.id, @ctx.id, [
+				[ 'a', vals1 ]
+				[ 'a', vals2 ]
+			]
