@@ -35,8 +35,10 @@ class TestAction extends StateBox.Action.SimpleAction
 		super( 'test', [], false )
 
 class TestActionRunner
+	constructor: (@res = {})->
+
 	invoke: ->
-		Q.resolve {}
+		Q.resolve @res
 
 actions =
 	test: new TestActionRunner()
@@ -496,6 +498,7 @@ describe 'StateBox', ->
 				a3: new TestActionRunner()
 				a4: new TestActionRunner()
 				a5: new TestActionRunner()
+				f42: new TestActionRunner( 42 )
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
 				source = """
@@ -525,6 +528,7 @@ describe 'StateBox', ->
 
               = ctx.quuz = 17;
               = ctx.quuz += 25;
+              = ctx.corge = action.f42();
             }
           }
 """
@@ -587,6 +591,10 @@ describe 'StateBox', ->
 					a7Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals1h )
 
 					v = ctx.getValue( 'quuz' )
+					should.exist v
+					v.should.eql 42
+
+					v = ctx.getValue( 'corge' )
 					should.exist v
 					v.should.eql 42
 

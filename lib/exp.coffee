@@ -188,20 +188,25 @@ class CallExp
 
 	evaluate: (ctx, trigger)->
 		@base.evaluateRef( ctx, trigger ).then (base)=>
-			f = functions[ base.base ]
-			if (base.path.length == 0) && (f?)
-				if f.length == @args.length
-					args = []
-					q = utils.reduce @args, (arg)->
-						arg.evaluate( ctx, trigger ).then (a)->
-							args.push a
+			args = []
+			q = utils.reduce @args, (arg)->
+				arg.evaluate( ctx, trigger ).then (a)->
+					args.push a
 
-					q.then ->
-						f.apply f, args
+			q.then =>
+				f = functions[ base.base ]
+				if (base.path.length == 0) && (f?)
+					if f.length == @args.length
+							f.apply f, args
+					else
+						Q.reject new Error "Invalid number of arguments for #{base.base}"
 				else
-					Q.reject new Error "Invalid number of arguments for #{base.base}"
-			else
-				Q.reject new Error "Unknown function #{base.base}"
+					actionRunner = ctx.getActions()[ base.path[ 0 ] ]
+
+					if (actionRunner?) && (base.path.length == 1) && (base.base == 'action') && (!f?)
+						actionRunner.invoke ctx, args
+					else
+						Q.reject new Error "Unknown function #{base.base}"
 
 	evaluateRef: (ctx, trigger)->
 		Q.reject new Error "Unable to calculate ref on function result"
