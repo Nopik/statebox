@@ -7,6 +7,13 @@ class Storage extends events.EventEmitter
 		@processingRunning = false
 		@processingStopRequested = false
 		@processing = Q.resolve({})
+		@actions = {}
+
+	setActions: (actions)->
+		@actions = actions
+
+	getActions: (actions)->
+		@actions
 
 	process: ->
 		old_processing = @processing
@@ -29,6 +36,8 @@ class Storage extends events.EventEmitter
 						@handleContext( ctx, triggerName, triggerValues ).then (ctx)=>
 							@updateContext( ctx )
 							@emit 'processedTrigger', ctx, triggerName
+						.fail (r)->
+								console.log "Error during trigger processing: #{r}"
 						.fin =>
 							process.nextTick p
 					, =>
@@ -56,7 +65,7 @@ class Storage extends events.EventEmitter
 		@processingStopRequested
 
 	handleContext: (ctx, triggerName, triggerValues)->
-		ctx.trigger( triggerName, triggerValues ).then ->
+		ctx.processTrigger( triggerName, triggerValues ).then ->
 			ctx
 
 	#Methods below are stubs, showing interface

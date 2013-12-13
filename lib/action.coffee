@@ -1,12 +1,22 @@
 util = require 'util'
 utils = require './utils'
 Q = require 'q'
+_ = require 'underscore'
 
 class SimpleAction
 	constructor: (@name, @args = [], @async = false )->
 
 	execute: (ctx, triggerValues)->
-		Q.resolve({})
+		action = ctx.getActions()?[ @name ]
+
+		if action?
+			args = _.map @args, (arg)-> arg.evaluate( ctx, triggerValues )
+
+			action.invoke( args )
+		else
+			Q.reject new Error( "Unknown action #{@name}" )
+
+#		Q.resolve {}
 
 class ConditionalAction
 	constructor: (@condition, @actions)->

@@ -30,6 +30,23 @@ sendTriggers = (mgr, graphId, ctxId, triggers)->
 	utils.reduce triggers, (trigger)->
 		mgr.addTrigger( graphId, ctxId, trigger[ 0 ], trigger[ 1 ], '' )
 
+class TestAction extends StateBox.Action.SimpleAction
+	constructor: ->
+		super( 'test', [], false )
+
+class TestActionRunner
+	invoke: ->
+		Q.resolve {}
+
+actions =
+	test: new TestActionRunner()
+	s1: new TestActionRunner()
+	s2: new TestActionRunner()
+	s3: new TestActionRunner()
+	s4: new TestActionRunner()
+	a1: new TestActionRunner()
+	a2: new TestActionRunner()
+
 class TestStorage extends StateBox.Storage
 	constructor: ->
 		@graphs = {}
@@ -40,6 +57,9 @@ class TestStorage extends StateBox.Storage
 
 		super
 			processDelayMs: 1
+
+		@actions =
+			test: new TestActionRunner()
 
 	saveGraph: (graph)->
 		@graphs[ @graph_count ] = graph
@@ -105,6 +125,7 @@ describe 'StateBox', ->
 	describe 'Manager', ->
 		beforeEach (done)->
 			@storage = new TestStorage()
+			@storage.setActions actions
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then ->
 				done()
@@ -291,7 +312,7 @@ describe 'StateBox', ->
 
 			it 'performs processing', (done)->
 				handleSpy = sinon.spy @storage, 'handleContext'
-				ctxSpy = sinon.spy @ctx, 'trigger'
+				ctxSpy = sinon.spy @ctx, 'processTrigger'
 
 				tName = 'test.name'
 				tVals =
@@ -415,8 +436,6 @@ describe 'StateBox', ->
 		it 'merges initial values', ->
 			@ctx.getValue( 'foo' ).should.eql 42
 
-	class TestAction extends StateBox.Action.SimpleAction
-
 	describe 'State', ->
 		beforeEach ->
 			@enterActions = [
@@ -438,7 +457,7 @@ describe 'StateBox', ->
 				sinon.spy ea, 'execute'
 
 		it 'launches enter actions', (done)->
-			ctx = {}
+			ctx = { getActions: -> actions }
 			vals = { foo: 42 }
 
 			@state.enter( ctx, vals ).then =>
@@ -453,7 +472,7 @@ describe 'StateBox', ->
 				done( r )
 
 		it 'launches leave actions', (done)->
-			ctx = {}
+			ctx = { getActions: -> actions }
 			vals = { foo: 42 }
 
 			@state.leave( ctx, vals ).then =>
@@ -470,6 +489,13 @@ describe 'StateBox', ->
 	describe 'Action', ->
 		beforeEach (done)->
 			@storage = new TestStorage()
+			@storage.setActions
+				a1: new TestActionRunner()
+				a2a: new TestActionRunner()
+				a2b: new TestActionRunner()
+				a3: new TestActionRunner()
+				a4: new TestActionRunner()
+				a5: new TestActionRunner()
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
 				source = """

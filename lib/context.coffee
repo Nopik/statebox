@@ -23,7 +23,6 @@ class Context
 
 			if startState?
 				@_moveToState( startState )
-				Q.resolve({})
 			else
 				@status = Context.Status.Failed
 				Q.reject( new Error( "Graph has no start state" ) )
@@ -34,7 +33,10 @@ class Context
 	destroy: ->
 		@storage.destroyContext( @graph_id, @id )
 
-	trigger: (name, values)->
+	getActions: ->
+		@storage.getActions()
+
+	processTrigger: (name, values)->
 		@storage.getGraph( @graph_id ).then (graph)=>
 			cs = @_getCurrentState()
 
@@ -52,15 +54,19 @@ class Context
 		@values.set name, value
 
 	_moveToState: (state, values = {})->
+		q = Q.resolve {}
+
 		cs = @_getCurrentState()
-		cs?.leave( this, values )
 
-		@setValue Context.StateValueName, state
+		if cs?
+			q = cs.leave( this, values )
 
-		state?.enter( this, values )
+		q.then =>
+			@setValue Context.StateValueName, state
 
-		if state.hasFlag( State.Flags.Finish )
-			@status = Context.Status.Finished
+			state?.enter( this, values ).then =>
+				if state.hasFlag( State.Flags.Finish )
+					@status = Context.Status.Finished
 
 	_getCurrentState: ->
 		@getValue Context.StateValueName

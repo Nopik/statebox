@@ -16,17 +16,21 @@ module.exports = (grunt)->
 					'src/graph.js': 'src/graph.jison'
 
 		watch:
+			jison:
+				options:
+					atBegin: true
+				files: [ 'src/graph.jison' ]
+				tasks: [ 'jison' ]
+
 			test:
+				options:
+					atBegin: true
 				files: [ 'lib/**/*.coffee', 'test/**/*.coffee', 'src/**/*.coffe', 'src/**/*.js', '!src/graph.js', '!test/parser.coffee', '!src/parse_helpers.coffee' ]
 				tasks: [ 'mochacli:all' ]
 
 			test_parser:
 				files: [ 'src/graph.js', 'test/parser.coffee', 'src/parse_helpers.coffee' ]
 				tasks: [ 'mochacli:parser' ]
-
-			jison:
-				files: [ 'src/graph.jison' ]
-				tasks: [ 'jison' ]
 
 	grunt.loadNpmTasks 'grunt-contrib-watch'
 	grunt.loadNpmTasks 'grunt-mocha-cli'
