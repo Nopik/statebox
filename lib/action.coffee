@@ -12,11 +12,14 @@ class SimpleAction
 		if action?
 			args = _.map @args, (arg)-> arg.evaluate( ctx, triggerValues )
 
-			action.invoke( args )
+			res = action.invoke( args )
+
+			if @async
+				Q.resolve {}
+			else
+				res
 		else
 			Q.reject new Error( "Unknown action #{@name}" )
-
-#		Q.resolve {}
 
 class ConditionalAction
 	constructor: (@condition, @actions)->
