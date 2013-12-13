@@ -10,14 +10,18 @@ class SimpleAction
 		action = ctx.getActions()?[ @name ]
 
 		if action?
-			args = _.map @args, (arg)-> arg.evaluate( ctx, triggerValues )
+			args = []
+			q = utils.reduce @args, (arg)->
+				arg.evaluate( ctx, triggerValues ).then (a)->
+					args.push a
 
-			res = action.invoke( args )
+			q.then ->
+				res = action.invoke( ctx, args )
 
-			if @async
-				Q.resolve {}
-			else
-				res
+				if @async
+					null
+				else
+					res
 		else
 			Q.reject new Error( "Unknown action #{@name}" )
 
@@ -25,19 +29,18 @@ class ConditionalAction
 	constructor: (@condition, @actions)->
 
 	execute: (ctx, triggerValues)->
-		if @condition.evaluate( ctx, triggerValues ) == true
-			utils.reduce @actions, (ea)=>
-				ea.execute( ctx, triggerValues )
-		else
-			Q.resolve({})
+		@condition.evaluate( ctx, triggerValues ).then (cond)=>
+			if cond == true
+				utils.reduce @actions, (ea)=>
+					ea.execute( ctx, triggerValues )
+			else
+				{}
 
 class ExpressionAction
 	constructor: (@expression)->
 
 	execute: (ctx, triggerValues)->
 		@expression.evaluate( ctx, triggerValues )
-
-		Q.resolve({})
 
 module.exports =
 	SimpleAction: SimpleAction
