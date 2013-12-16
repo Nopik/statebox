@@ -6,6 +6,7 @@ Action = require './action'
 Manager = require './manager'
 Exp = require './exp'
 Values = require './values'
+Runners = require './runners'
 
 module.exports =
 	Graph: Graph
@@ -16,3 +17,4 @@ module.exports =
 	Action: Action
 	Exp: Exp
 	Values: Values
+	Runners: Runners

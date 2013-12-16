@@ -4,6 +4,7 @@ chai.use require 'sinon-chai'
 should = chai.should()
 util = require 'util'
 utils = require '../lib/utils'
+nock = require 'nock'
 
 StateBox = require '../lib/statebox'
 _ = require 'underscore'
@@ -499,6 +500,7 @@ describe 'StateBox', ->
 				a4: new TestActionRunner()
 				a5: new TestActionRunner()
 				f42: new TestActionRunner( 42 )
+
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
 				source = """
@@ -633,4 +635,57 @@ describe 'StateBox', ->
 			sendTriggers @mgr, @graph.id, @ctx.id, [
 				[ 'a', vals1 ]
 				[ 'a', vals2 ]
+			]
+
+	describe 'Runners', ->
+		beforeEach (done)->
+			@storage = new TestStorage()
+			@storage.setActions
+				http: new StateBox.Runners.Http()
+
+			@mgr = new StateBox.Manager( @storage )
+			@mgr.init().then =>
+				source = """
+          state a[start]
+          {
+            @a {
+              = ctx.res = action.http( "http://"+trigger.host+":"+trigger.port+trigger.path );
+            }
+          }
+"""
+				@mgr.buildGraph( source ).then (graph)=>
+					@graph = graph
+
+					@mgr.runGraph( graph.id, {} ).then (ctx)=>
+						@ctx = ctx
+
+						@mgr.startProcessing().then ->
+							done()
+			.fail (r)->
+				done( r )
+
+		afterEach (done)->
+			@mgr.stopProcessing ->
+				done()
+
+		it 'calls http', (done)->
+			nock.disableNetConnect()
+			nock( 'http://localhost:7000' ).get( '/http_test' ).reply( 200, '42', {'Content-Type': 'text/plain'} )
+
+			vals =
+				host: 'localhost'
+				port: 7000
+				path: '/http_test'
+
+			fs = [
+				(ctx, name)=>
+					v = ctx.getValue( 'res' )
+					should.exist v
+					v.should.eql '42'
+			]
+
+			waitForTriggers @storage, fs, done
+
+			sendTriggers @mgr, @graph.id, @ctx.id, [
+				[ 'a', vals ]
 			]
