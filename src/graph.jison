@@ -79,7 +79,7 @@ state : STATE WORD state_flags '{' triggers '}' opt_semi { $$ = new StateBox.Sta
 
 state_flags : { $$ = 0; } | '[' flags ']' { $$ = $2; };
 
-flags : WORD { $$ = ParseHelpers.getFlag( $1 ); } | flags ',' WORD { $$ = $1 + ParseHelpers.getFlag( $3 ); };
+flags : WORD { $$ = ParseHelpers.getFlag( $1 ); } | flags opt_comma WORD { $$ = $1 + ParseHelpers.getFlag( $3 ); };
 
 triggers
 	: { $$ = { enter: [], leave: [], at: [] }; }
@@ -119,6 +119,7 @@ identifier
 	| identifier '.' WORD { $$ = $1 + "." + $3; };
 
 opt_semi : | ';';
+opt_comma : | ',';
 
 /* Expressions */
 
