@@ -642,6 +642,7 @@ describe 'StateBox', ->
 			@storage = new TestStorage()
 			@storage.setActions
 				http: new StateBox.Runners.Http()
+				getJSON: new StateBox.Runners.Json()
 
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
@@ -650,6 +651,7 @@ describe 'StateBox', ->
           {
             @a {
               = ctx.res = action.http( "http://"+trigger.host+":"+trigger.port+trigger.path );
+              = ctx.baz = action.getJSON( "http://"+trigger.host+":"+trigger.port+trigger.path+"2" );
             }
           }
 """
@@ -669,8 +671,12 @@ describe 'StateBox', ->
 				done()
 
 		it 'calls http', (done)->
+			testval =
+				foo: 'bar'
+
 			nock.disableNetConnect()
 			nock( 'http://localhost:7000' ).get( '/http_test' ).reply( 200, '42', {'Content-Type': 'text/plain'} )
+			nock( 'http://localhost:7000' ).get( '/http_test2' ).reply( 200, testval, {'Content-Type': 'application/json'} )
 
 			vals =
 				host: 'localhost'
@@ -682,6 +688,9 @@ describe 'StateBox', ->
 					v = ctx.getValue( 'res' )
 					should.exist v
 					v.should.eql '42'
+					v = ctx.getValue( 'baz' )
+					should.exist v
+					v.should.eql testval
 			]
 
 			waitForTriggers @storage, fs, done

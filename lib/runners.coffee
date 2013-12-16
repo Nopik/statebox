@@ -21,11 +21,9 @@ class Http
 				for k, v of headers
 					sa = sa.set k, v
 
-			sa.end (err, res)->
-#			SuperAgent.get('http://localhost:7000/http_test').end (err, res)->
+			sa.end (err, res)=>
 				if !err?
-#					console.log res
-					q.resolve res.text
+					q.resolve @_extract res
 				else
 					q.reject err
 
@@ -33,5 +31,13 @@ class Http
 		else
 			Q.reject new Error 'No url given for http action'
 
+	_extract: (res)->
+		res.text
+
+class Json extends Http
+	_extract: (res)->
+		res.body
+
 module.exports =
 	Http: Http
+	Json: Json
