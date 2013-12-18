@@ -4,9 +4,12 @@ Storage = require '../storage'
 Graph = require '../graph'
 mongoose = require 'mongoose'
 
+#mongoose.set 'debug', true
+
 GraphSchema = mongoose.Schema
 	source: String
 	data: String
+, { safe: { w: 1 } }
 
 GraphModel = mongoose.model 'Graph', GraphSchema
 
@@ -44,7 +47,7 @@ class MongoStorage extends Storage
 		q = Q.defer()
 
 		model.save (err, g)=>
-			if !err?
+			if !err
 				graph.id = g._id
 				q.resolve graph
 			else
@@ -53,7 +56,15 @@ class MongoStorage extends Storage
 		q.promise
 
 	destroyGraph: (graph_id)->
-		Q.resolve({})
+		q = Q.defer()
+
+		GraphModel.remove { _id: graph_id }, (err)=>
+			if !err
+				q.resolve {}
+			else
+				q.reject err
+
+		q.promise
 
 	_buildGraph: (model)->
 		g = new Graph model.source, this
@@ -64,7 +75,7 @@ class MongoStorage extends Storage
 		q = Q.defer()
 
 		GraphModel.findOne { _id: graph_id }, (err, model)=>
-			if !err?
+			if !err
 				q.resolve @_buildGraph( model )
 			else
 				q.reject err
@@ -75,7 +86,7 @@ class MongoStorage extends Storage
 		q = Q.defer()
 
 		GraphModel.find {}, (err, models)=>
-			if !err?
+			if !err
 				q.resolve _.collect models, (model)=>
 					@_buildGraph( model )
 			else

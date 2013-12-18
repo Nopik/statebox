@@ -88,6 +88,11 @@ describe 'Mongo Storage', ->
 						graph.source.should.eql g.source
 						graph.serialize().should.eql g.serialize()
 
-						done()
+						graph.destroy().then =>
+							@mgr.getGraphs().then (graphs)=>
+								should.exist graphs
+								graphs.length.should.eql 0
+
+								done()
 			.fail (r)->
 				done( r )
