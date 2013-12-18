@@ -96,3 +96,43 @@ describe 'Mongo Storage', ->
 								done()
 			.fail (r)->
 				done( r )
+
+		it 'manages contexts', (done)->
+			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
+				@mgr.getContexts( graph.id ).then (ctxs0)=>
+					ctxs0.should.be.an.instanceOf Array
+					ctxs0.length.should.eql 0
+
+					@mgr.runGraph( graph.id ).then (ctx)=>
+						should.exist ctx
+						should.exist ctx.id
+						ctx.id.toString().length.should.eql 24 #Mongo ID length
+
+						@mgr.getContexts( graph.id ).then (ctxs1)=>
+							ctxs1.should.be.an.instanceOf Array
+							ctxs1.length.should.eql 1
+							ctxs1[ 0 ].should.be.instanceOf StateBox.Context
+							ctxs1[ 0 ].id.toString().should.eql ctx.id.toString()
+
+							@mgr.getContext( graph.id, ctx.id ).then (ctx1)=>
+								should.exist ctx1
+								ctx1.should.be.instanceOf StateBox.Context
+								ctx1.id.toString().should.eql ctx.id.toString()
+								ctx1.graph_id.toString().should.eql graph.id.toString()
+								ctx1.status.should.eql StateBox.Context.Status.Active
+
+								@mgr.abortContext( graph.id, ctx.id ).then =>
+									@mgr.getContext( graph.id, ctx.id ).then (ctx1a)=>
+										ctx1a.status.should.eql StateBox.Context.Status.Aborted
+
+										ctx.destroy().then =>
+											@mgr.getContexts( graph.id ).then (ctxs2)=>
+												ctxs2.should.be.an.instanceOf Array
+												ctxs2.length.should.eql 0
+
+												@mgr.getContext( graph.id, ctx.id ).then (ctx2)=>
+													should.not.exist ctx2
+
+													done()
+			.fail (r)->
+				done(r)
