@@ -78,6 +78,9 @@ class Storage extends events.EventEmitter
 	getActiveContext: ->
 		Q.reject({})
 
+	getGraph: (graph_id)->
+		Q.reject({})
+
 	getGraphs: ->
 		Q.resolve([])
 

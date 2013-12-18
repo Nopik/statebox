@@ -8,6 +8,8 @@ Exp = require './exp'
 Values = require './values'
 Runners = require './runners'
 
+MongoStorage = require './adapters/mongo'
+
 module.exports =
 	Graph: Graph
 	Context: Context
@@ -18,3 +20,5 @@ module.exports =
 	Exp: Exp
 	Values: Values
 	Runners: Runners
+	StorageAdapters:
+		Mongo: MongoStorage

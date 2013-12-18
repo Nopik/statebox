@@ -20,4 +20,7 @@ class Graph
 				return state
 		undefined
 
+	serialize: ->
+		{}
+
 module.exports = Graph

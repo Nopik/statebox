@@ -10,6 +10,8 @@ module.exports = (grunt)->
 
 			parser: [ 'test/parser.coffee' ]
 
+			mongo: [ 'test/mongo.coffee' ]
+
 		jison:
 			target:
 				files:
@@ -25,12 +27,18 @@ module.exports = (grunt)->
 			test:
 				options:
 					atBegin: true
-				files: [ 'lib/**/*.coffee', 'test/**/*.coffee', 'src/**/*.coffe', 'src/**/*.js', '!src/graph.js', '!test/parser.coffee', '!src/parse_helpers.coffee' ]
+				files: [ 'lib/**/*.coffee', 'test/**/*.coffee', 'src/**/*.coffe', 'src/**/*.js', '!src/graph.js', '!test/parser.coffee', '!src/parse_helpers.coffee', '!lib/adapters/mongo.coffee' ]
 				tasks: [ 'mochacli:all' ]
 
 			test_parser:
 				files: [ 'src/graph.js', 'test/parser.coffee', 'src/parse_helpers.coffee' ]
 				tasks: [ 'mochacli:parser' ]
+
+			mongo:
+				options:
+					atBegin: true
+				files: [ 'lib/adapters/mongo.coffee', 'test/mongo.coffee' ]
+				tasks: [ 'mochacli:mongo' ]
 
 	grunt.loadNpmTasks 'grunt-contrib-watch'
 	grunt.loadNpmTasks 'grunt-mocha-cli'

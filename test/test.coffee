@@ -149,6 +149,7 @@ describe 'StateBox', ->
 			@mgr.buildGraph( 'state a {}' ).then (graph)=>
 				id = graph.id
 				graph.destroy().then =>
+					saveSpy.should.have.been.calledOnce
 					destroySpy.should.have.been.calledOnce.calledWithExactly( id )
 					done()
 			.fail (r)->
@@ -504,35 +505,35 @@ describe 'StateBox', ->
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
 				source = """
-          state a[start]
-          {
-            @a {
-              a1;
-              ? (2+3 > 4) && (5 > -5) {
-                a2a;
-              }
+					state a[start]
+					{
+						@a {
+							a1;
+							? (2+3 > 4) && (5 > -5) {
+								a2a;
+							}
 
-              ? (2+3 > 5) && (5 > -5) {
-                a2b;
-              }
+							? (2+3 > 5) && (5 > -5) {
+								a2b;
+							}
 
-              ? trigger.foo + ctx.bar == 50 {
-                a3;
-              }
+							? trigger.foo + ctx.bar == 50 {
+								a3;
+							}
 
-              ? trigger.bar[ 0 ] == "baz" {
-                a4;
-              }
+							? trigger.bar[ 0 ] == "baz" {
+								a4;
+							}
 
-              ? exist( trigger.qux ) == true {
-                a5;
-              }
+							? exist( trigger.qux ) == true {
+								a5;
+							}
 
-              = ctx.quuz = 17;
-              = ctx.quuz += 25;
-              = ctx.corge = action.f42();
-            }
-          }
+							= ctx.quuz = 17;
+							= ctx.quuz += 25;
+							= ctx.corge = action.f42();
+						}
+					}
 """
 				@mgr.buildGraph( source ).then (graph)=>
 					@graph = graph
@@ -647,13 +648,13 @@ describe 'StateBox', ->
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
 				source = """
-          state a[start]
-          {
-            @a {
-              = ctx.res = action.http( "http://"+trigger.host+":"+trigger.port+trigger.path );
-              = ctx.baz = action.getJSON( "http://"+trigger.host+":"+trigger.port+trigger.path+"2" );
-            }
-          }
+					state a[start]
+					{
+						@a {
+							= ctx.res = action.http( "http://"+trigger.host+":"+trigger.port+trigger.path );
+							= ctx.baz = action.getJSON( "http://"+trigger.host+":"+trigger.port+trigger.path+"2" );
+						}
+					}
 """
 				@mgr.buildGraph( source ).then (graph)=>
 					@graph = graph
@@ -688,6 +689,7 @@ describe 'StateBox', ->
 					v = ctx.getValue( 'res' )
 					should.exist v
 					v.should.eql '42'
+
 					v = ctx.getValue( 'baz' )
 					should.exist v
 					v.should.eql testval
