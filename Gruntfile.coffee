@@ -27,7 +27,7 @@ module.exports = (grunt)->
 			test:
 				options:
 					atBegin: true
-				files: [ 'lib/**/*.coffee', 'test/**/*.coffee', 'src/**/*.coffe', 'src/**/*.js', '!src/graph.js', '!test/parser.coffee', '!src/parse_helpers.coffee', '!lib/adapters/mongo.coffee' ]
+				files: [ 'lib/**/*.coffee', 'test/**/*.coffee', 'src/**/*.coffe', 'src/**/*.js', '!src/graph.js', '!test/parser.coffee', '!test/mongo.coffee', '!src/parse_helpers.coffee', '!lib/adapters/mongo.coffee' ]
 				tasks: [ 'mochacli:all' ]
 
 			test_parser:

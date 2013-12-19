@@ -119,7 +119,6 @@ class TestStorage extends StateBox.Storage
 						ctx: @contexts[ gid ][ cid ]
 						triggerName: trigger.name
 						triggerValues: trigger.values
-						source: trigger.source
 
 		Q.reject({})
 

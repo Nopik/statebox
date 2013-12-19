@@ -6,13 +6,29 @@ should = chai.should()
 util = require 'util'
 _ = require 'underscore'
 mongoose = require 'mongoose'
+Q = require 'q'
 
 StateBox = require '../lib/statebox'
 
 url = 'mongodb://localhost/statebox-test'
 
 new_storage = ->
-	new StateBox.StorageAdapters.Mongo( url )
+	new StateBox.StorageAdapters.Mongo( url, { processDelayMs: 100 } )
+
+class TestActionRunner
+	constructor: (@res = {})->
+
+	invoke: ->
+		Q.resolve @res
+
+actions =
+	test: new TestActionRunner()
+	s1: new TestActionRunner()
+	s2: new TestActionRunner()
+	s3: new TestActionRunner()
+	s4: new TestActionRunner()
+	a1: new TestActionRunner()
+	a2: new TestActionRunner()
 
 describe 'Mongo Storage', ->
 	beforeEach (done) ->
@@ -150,3 +166,81 @@ describe 'Mongo Storage', ->
 							ctx1.getValue( 'foo' ).should.eql 42
 							ctx1.getValue( 'bar' ).should.eql [ 'foo' ]
 							done()
+
+		it 'adds trigger', (done)->
+			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
+				@mgr.runGraph( graph.id ).then (ctx)=>
+					@mgr.addTrigger( graph.id, ctx.id, 't1', { foo: 42 } ).then =>
+						done()
+			.fail (r)->
+				done( r )
+
+	describe 'Processing', ->
+		beforeEach (done)->
+			source = """
+				state a[start]
+				{
+					-> { s1; };
+
+					<- { s2; };
+
+					@test.name {
+						= ctx.foo = 42;
+					};
+
+					@b -> b { a1; };
+				};
+
+				state b
+				{
+					-> { s3; };
+
+					<- { s4; };
+
+					@a -> a { a2; };
+				};
+"""
+
+			@storage = new_storage()
+			@storage.setActions actions
+			@mgr = new StateBox.Manager( @storage )
+			@mgr.init().then =>
+				@mgr.buildGraph( source ).then (graph)=>
+					@graph = graph
+
+					@mgr.runGraph( @graph.id ).then (ctx)=>
+						@ctx = ctx
+
+						@mgr.startProcessing().then ->
+							done()
+			.fail (r)->
+				done( r )
+
+		afterEach (done)->
+			@mgr.stopProcessing =>
+				@storage.disconnect().then ->
+					done()
+			.fail (r)->
+				done( r )
+
+		it 'initializes', ->
+
+		it 'performs processing', (done)->
+			tName = 'test.name'
+			tVals =
+				foo: 42
+
+			processed = (ctx, triggerName)=>
+				try
+					ctx.id.should.eql @ctx.id
+					triggerName.should.eql tName
+					done()
+				catch e
+					done( e )
+
+			@storage.on 'processedTrigger', processed
+
+			@mgr.addTrigger( @graph.id, @ctx.id, tName, tVals ).then =>
+				true
+			.fail (r)->
+				done( r )
