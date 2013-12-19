@@ -29,7 +29,7 @@ waitForTriggers = (storage, fs, done)->
 
 sendTriggers = (mgr, graphId, ctxId, triggers)->
 	utils.reduce triggers, (trigger)->
-		mgr.addTrigger( graphId, ctxId, trigger[ 0 ], trigger[ 1 ], '' )
+		mgr.addTrigger( graphId, ctxId, trigger[ 0 ], trigger[ 1 ] )
 
 class TestAction extends StateBox.Action.SimpleAction
 	constructor: ->
@@ -100,13 +100,12 @@ class TestStorage extends StateBox.Storage
 	getContext: (graph_id, context_id)->
 		Q.resolve @contexts[ graph_id ][ context_id ]
 
-	addTrigger: (graph_id, context_id, name, values, source)->
+	addTrigger: (graph_id, context_id, name, values)->
 		@triggers[ graph_id ] ?= {}
 		@triggers[ graph_id ][ context_id ] ?= []
 		@triggers[ graph_id ][ context_id ].push
 			name: name
 			values: values
-			source: source
 
 		Q.resolve({})
 
@@ -241,8 +240,8 @@ describe 'StateBox', ->
 
 			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
 				@mgr.runGraph( graph.id ).then (ctx)=>
-					@mgr.addTrigger( graph.id, ctx.id, 'test_trigger', { test: 1 }, 'test' ).then =>
-						addSpy.should.have.been.calledOnce.calledWithExactly graph.id, ctx.id, 'test_trigger', { test: 1 }, 'test'
+					@mgr.addTrigger( graph.id, ctx.id, 'test_trigger', { test: 1 } ).then =>
+						addSpy.should.have.been.calledOnce.calledWithExactly graph.id, ctx.id, 'test_trigger', { test: 1 }
 						done()
 			.fail (r)->
 				done( r )
@@ -334,7 +333,7 @@ describe 'StateBox', ->
 
 				@storage.on 'processedTrigger', processed
 
-				@mgr.addTrigger( @graph.id, @ctx.id, tName, tVals, 'test source' ).then =>
+				@mgr.addTrigger( @graph.id, @ctx.id, tName, tVals ).then =>
 					true
 				.fail (r)->
 					done( r )
@@ -363,7 +362,7 @@ describe 'StateBox', ->
 							name.should.eql 'b'
 							@ctx.getValue( StateBox.Context.StateValueName ).name.should.eql 'b'
 							step = 1
-							@mgr.addTrigger( @graph.id, @ctx.id, 'a', vals, '' ).then =>
+							@mgr.addTrigger( @graph.id, @ctx.id, 'a', vals ).then =>
 								true
 						else
 							if step == 1
@@ -381,7 +380,7 @@ describe 'StateBox', ->
 						step = -1
 						done( e )
 
-				@mgr.addTrigger( @graph.id, @ctx.id, 'b', vals, '' ).then =>
+				@mgr.addTrigger( @graph.id, @ctx.id, 'b', vals ).then =>
 					true
 
 	describe 'Graph', ->

@@ -170,7 +170,7 @@ class MongoStorage extends Storage
 		Q.resolve({})
 
 
-	addTrigger: (graph_id, context_id, name, values, source)->
+	addTrigger: (graph_id, context_id, name, values)->
 		Q.reject({})
 
 	getActiveContext: ->

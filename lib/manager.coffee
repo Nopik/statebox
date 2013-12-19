@@ -29,8 +29,8 @@ class Manager
 			@storage.saveContext( ctx ).then ->
 				ctx
 
-	addTrigger: (graph_id, context_id, name, values, source = '')->
-		@storage.addTrigger graph_id, context_id, name, values, source
+	addTrigger: (graph_id, context_id, name, values)->
+		@storage.addTrigger graph_id, context_id, name, values
 
 	getContexts: (graph_id)->
 		@storage.getContexts( graph_id )

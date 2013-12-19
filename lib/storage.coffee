@@ -104,7 +104,7 @@ class Storage extends events.EventEmitter
 	destroyContext: (graph_id, context_id)->
 		Q.reject({})
 
-	addTrigger: (graph_id, context_id, name, values, source)->
+	addTrigger: (graph_id, context_id, name, values)->
 		Q.reject({})
 
 	updateContext: (ctx)->
