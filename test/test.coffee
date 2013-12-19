@@ -246,6 +246,21 @@ describe 'StateBox', ->
 			.fail (r)->
 				done( r )
 
+		it 'sets context values', (done)->
+			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
+				@mgr.runGraph( graph.id ).then (ctx)=>
+					@mgr.getContextValue( graph.id, ctx.id, 'foo' ).then (v)=>
+						should.not.exist v
+
+						@mgr.setContextValue( graph.id, ctx.id, 'foo', 42 ).then =>
+							@mgr.getContextValue( graph.id, ctx.id, 'foo' ).then (v)=>
+								should.exist v
+								v.should.eql 42
+
+								done()
+			.fail (r)->
+				done( r )
+
 		it 'manages processing', (done)->
 			processSpy = sinon.spy @storage, 'process'
 			stopProcessingSpy = sinon.spy @storage, 'stopProcessing'
@@ -360,7 +375,7 @@ describe 'StateBox', ->
 							blSpy.should.have.not.been.called
 
 							name.should.eql 'b'
-							@ctx.getValue( StateBox.Context.StateValueName ).name.should.eql 'b'
+							@ctx.getValue( StateBox.Context.StateValueName ).should.eql 'b'
 							step = 1
 							@mgr.addTrigger( @graph.id, @ctx.id, 'a', vals ).then =>
 								true
@@ -374,7 +389,7 @@ describe 'StateBox', ->
 								beSpy.should.have.been.calledOnce.calledWithExactly( @ctx, valsh )
 								blSpy.should.have.been.calledOnce.calledWithExactly( @ctx, valsh )
 
-								@ctx.getValue( StateBox.Context.StateValueName ).name.should.eql 'a'
+								@ctx.getValue( StateBox.Context.StateValueName ).should.eql 'a'
 								done()
 					catch e
 						step = -1
@@ -426,7 +441,7 @@ describe 'StateBox', ->
 		it 'chooses initial state', ->
 			ss = @graph.getStartState()
 			should.exist ss
-			@ctx.getValue( StateBox.Context.StateValueName ).should.eql ss
+			@ctx.getValue( StateBox.Context.StateValueName ).should.eql ss.name
 
 		it 'sets values', ->
 			v = 'test_val'

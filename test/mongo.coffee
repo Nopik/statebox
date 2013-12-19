@@ -120,10 +120,12 @@ describe 'Mongo Storage', ->
 								ctx1.id.toString().should.eql ctx.id.toString()
 								ctx1.graph_id.toString().should.eql graph.id.toString()
 								ctx1.status.should.eql StateBox.Context.Status.Active
+								ctx1.getValue( StateBox.Context.StateValueName ).should.eql 'a'
 
 								@mgr.abortContext( graph.id, ctx.id ).then =>
 									@mgr.getContext( graph.id, ctx.id ).then (ctx1a)=>
 										ctx1a.status.should.eql StateBox.Context.Status.Aborted
+										ctx1a.getValue( StateBox.Context.StateValueName ).should.eql 'a'
 
 										ctx.destroy().then =>
 											@mgr.getContexts( graph.id ).then (ctxs2)=>
@@ -136,3 +138,15 @@ describe 'Mongo Storage', ->
 													done()
 			.fail (r)->
 				done(r)
+
+		it 'updates contexts', (done)->
+			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
+				@mgr.runGraph( graph.id ).then (ctx)=>
+					ctx.setValue 'foo', 42
+					ctx.setValue 'bar', [ 'foo' ]
+
+					@storage.updateContext( ctx ).then =>
+						@mgr.getContext( graph.id, ctx.id ).then (ctx1)=>
+							ctx1.getValue( 'foo' ).should.eql 42
+							ctx1.getValue( 'bar' ).should.eql [ 'foo' ]
+							done()

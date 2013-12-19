@@ -15,14 +15,13 @@ class Context
 		values ?= {}
 		@values = new Values.Holder values
 		@status = Context.Status.Active
-		@setValue Context.StateValueName, null
 
 	init: ->
 		@storage.getGraph( @graph_id ).then (graph)=>
 			startState = graph.getStartState()
 
 			if startState?
-				@_moveToState( startState )
+				@_moveToState( graph, startState )
 			else
 				@status = Context.Status.Failed
 				Q.reject( new Error( "Graph has no start state" ) )
@@ -38,14 +37,16 @@ class Context
 
 	processTrigger: (name, values)->
 		@storage.getGraph( @graph_id ).then (graph)=>
-			cs = @_getCurrentState()
+			csn = @_getCurrentStateName()
+
+			cs = graph.getState( csn )
 
 			values = new Values.Holder values
 			cs.runTrigger( this, name, values ).then (nextStateName)=>
 				if nextStateName?
 					nextState = graph.getState( nextStateName )
 					if nextState?
-						@_moveToState( nextState, values )
+						@_moveToState( graph, nextState, values )
 
 	getValue: (name)->
 		@values.get name
@@ -53,22 +54,25 @@ class Context
 	setValue: (name, value)->
 		@values.set name, value
 
-	_moveToState: (state, values = {})->
+	_moveToState: (graph, state, values = {})->
 		q = Q.resolve {}
 
-		cs = @_getCurrentState()
+		csn = @_getCurrentStateName()
 
-		if cs?
-			q = cs.leave( this, values )
+		if csn?
+			cs = graph.getState( csn )
+
+			if cs?
+				q = cs.leave( this, values )
 
 		q.then =>
-			@setValue Context.StateValueName, state
+			@setValue Context.StateValueName, state.name
 
 			state?.enter( this, values ).then =>
 				if state.hasFlag( State.Flags.Finish )
 					@status = Context.Status.Finished
 
-	_getCurrentState: ->
+	_getCurrentStateName: ->
 		@getValue Context.StateValueName
 
 module.exports = Context

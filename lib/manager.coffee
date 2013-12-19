@@ -42,6 +42,11 @@ class Manager
 		@storage.getContext( graph_id, context_id ).then (ctx)->
 			ctx.getValue( name )
 
+	setContextValue: (graph_id, context_id, name, value)->
+		@storage.getContext( graph_id, context_id ).then (ctx)=>
+			ctx.setValue( name, value )
+			@storage.updateContext ctx
+
 	abortContext: (graph_id, context_id)->
 		@getContext( graph_id, context_id ).then (ctx)=>
 			ctx.abort()

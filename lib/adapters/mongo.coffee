@@ -111,10 +111,8 @@ class MongoStorage extends Storage
 
 
 	saveContext: (ctx)->
-		#TODO: values.vals, state.serialize()
-
 		model = new ContextModel
-			values: JSON.stringify ctx.values
+			values: JSON.stringify ctx.values.serialize()
 			graph_id: ctx.graph_id
 			status: ctx.status
 
@@ -167,7 +165,18 @@ class MongoStorage extends Storage
 		q.promise
 
 	updateContext: (ctx)->
-		Q.resolve({})
+		q = Q.defer()
+
+		ContextModel.findByIdAndUpdate ctx.id, { $set:
+			status: ctx.status
+			values: JSON.stringify ctx.values.serialize()
+		}, (err, c)=>
+			if !err
+				q.resolve ctx
+			else
+				q.reject err
+
+		q.promise
 
 
 	addTrigger: (graph_id, context_id, name, values)->

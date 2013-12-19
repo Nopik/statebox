@@ -7,6 +7,9 @@ class Holder
 	set: (name, val)->
 		@vals[ name ] = val
 
+	serialize: ->
+		@vals
+
 class Ref
 	constructor: (@base, @path = [])->
 

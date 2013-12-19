@@ -89,7 +89,7 @@ case 2: this.$ = [ $$[$0] ];
 break;
 case 3: this.$ = $$[$0-1].concat( [ $$[$0] ] ); 
 break;
-case 4: this.$ = new State( $$[$0-5], $$[$0-2].enter, $$[$0-2].leave, $$[$0-2].at, $$[$0-4] ) 
+case 4: this.$ = new State( $$[$0-5], $$[$0-2].enter, $$[$0-2].leave, $$[$0-2].at, $$[$0-4] ); 
 break;
 case 5: this.$ = 0; 
 break;
@@ -117,9 +117,9 @@ case 16: this.$ = [];
 break;
 case 17: this.$ = $$[$0-1].concat( [ $$[$0] ] ); 
 break;
-case 18: this.$ = new Action.ConditionalAction( $$[$0-4], $$[$0-2] ) 
+case 18: this.$ = new Action.ConditionalAction( $$[$0-4], $$[$0-2] ); 
 break;
-case 19: this.$ = new Action.ExpressionAction( $$[$0-1] ) 
+case 19: this.$ = new Action.ExpressionAction( $$[$0-1] ); 
 break;
 case 20: this.$ = $$[$0-1]; 
 break;
@@ -127,7 +127,7 @@ case 21: this.$ = $$[$0];
 break;
 case 22: this.$ = new Action.SimpleAction( $$[$0], [], $$[$0-1] ); 
 break;
-case 23: this.$ = new Action.SimpleAction( $$[$0-1], $$[$0], $$[$0-2] ) 
+case 23: this.$ = new Action.SimpleAction( $$[$0-1], $$[$0], $$[$0-2] ); 
 break;
 case 24: this.$ = false; 
 break;
@@ -161,7 +161,7 @@ case 42: this.$ = new Exp.PropExp( $$[$0-2], $$[$0] );
 break;
 case 43: this.$ = [ $$[$0] ]; 
 break;
-case 44: this.$ = $$[$0-2].concat( [ $$[$0] ] ) 
+case 44: this.$ = $$[$0-2].concat( [ $$[$0] ] ); 
 break;
 case 45: this.$ = $$[$0]; 
 break;
