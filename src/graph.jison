@@ -50,6 +50,7 @@ ParseHelpers = require('./parse_helpers');
 '=' { return '='; }
 '&' { return '&'; }
 '|' { return '|'; }
+':' { return ':'; }
 '^' { return '^'; }
 '*' { return '*'; }
 '/' { return '/'; }
@@ -125,11 +126,27 @@ opt_comma : | ',';
 
 /* Expressions */
 
+object_literal_property
+	: WORD ':' expression { $$ = [ '"'+$1+'"', $3 ]; }
+	| STRING_LITERAL ':' expression { $$ = [ $1, $3 ]; }
+	;
+
+object_literal_properties
+	: object_literal_property { $$ = [ $1 ]; }
+	| object_literal_properties ',' object_literal_property { $1.push( $3 ); $$ = $1; }
+	;
+
+object_literal
+	: '{' '}' { $$ = $$ = new Exp.ObjectLiteralExp( [] ); }
+	| '{' object_literal_properties '}' { $$ = new Exp.ObjectLiteralExp( $2 ); }
+	;
+
 primary_expression
 	: WORD { $$ = new Exp.WordLiteralExp( $1 ); }
 	| NUMBER { $$ = new Exp.NumberLiteralExp( $1 ); }
 	| STRING_LITERAL { $$ = new Exp.StringLiteralExp( $1 ); }
-	/* TODO: array literal, object literal */
+	| object_literal { $$ = $1; }
+	/* TODO: object literal */
 	| '(' expression ')' { $$ = $2; }
 	;
 

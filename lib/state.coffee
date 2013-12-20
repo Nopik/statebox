@@ -25,7 +25,7 @@ class State
 			q.then ->
 				triggerAction.to
 		else
-			Q.reject({})
+			Q.resolve({}) #ignore unhandled trigger
 
 	findTriggerAction: (name)->
 		for triggerAction in @triggerActions

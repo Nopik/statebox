@@ -37,7 +37,9 @@ class Storage extends events.EventEmitter
 							@updateContext( ctx ).fin =>
 								@emit 'processedTrigger', ctx, triggerName
 						.fail (r)->
-								console.log "Error during trigger processing: #{r}"
+							ctx.abort()
+							@updateContext( ctx )
+#								console.log "Error during trigger processing: #{r}"
 						.fin =>
 							process.nextTick p
 					, =>

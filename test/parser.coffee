@@ -129,3 +129,18 @@ describe 'Parser', ->
 		s.args.length.should.eql 3
 		s.args[ 2 ].should.be.instanceOf StateBox.Exp.WordLiteralExp
 		s.args[ 2 ].word.should.eql 'ctx'
+
+	it 'parses object literals', ->
+		s = Parser.parser.parse "state x {-> { a1 { a: 1, \"b\": 2 }; }}"
+		s = s[ 0 ].enterActions[ 0 ]
+		s.args.should.be.instanceOf Array
+		s.args.length.should.eql 1
+		s.args[ 0 ].should.be.instanceOf StateBox.Exp.ObjectLiteralExp
+		s.args[ 0 ].props.should.be.instanceOf Array
+		s.args[ 0 ].props.length.should.eql 2
+		s.args[ 0 ].props[ 0 ][ 0 ].should.eql '"a"'
+		s.args[ 0 ].props[ 0 ][ 1 ].should.be.instanceOf StateBox.Exp.NumberLiteralExp
+		s.args[ 0 ].props[ 0 ][ 1 ].number.should.eql "1"
+		s.args[ 0 ].props[ 1 ][ 0 ].should.eql '"b"'
+		s.args[ 0 ].props[ 1 ][ 1 ].should.be.instanceOf StateBox.Exp.NumberLiteralExp
+		s.args[ 0 ].props[ 1 ][ 1 ].number.should.eql "2"

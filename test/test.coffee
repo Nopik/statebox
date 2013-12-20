@@ -506,9 +506,11 @@ describe 'StateBox', ->
 							= ctx.quuz = 17;
 							= ctx.quuz += 25;
 							= ctx.corge = action.f42();
+							= ctx.grault = { a: 1, "b": 2, c: 6*7 };
 						}
 					}
 """
+
 				@mgr.buildGraph( source ).then (graph)=>
 					@graph = graph
 
@@ -574,6 +576,13 @@ describe 'StateBox', ->
 					v = ctx.getValue( 'corge' )
 					should.exist v
 					v.should.eql 42
+
+					v = ctx.getValue( 'grault' )
+					should.exist v
+					v.should.eql
+						a: 1
+						b: 2
+						c: 42
 
 					a1Spy.reset()
 					a20Spy.reset()

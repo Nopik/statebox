@@ -142,6 +142,23 @@ class StringLiteralExp
 	evaluateRef: (ctx, trigger)->
 		Q.reject new Error "Cannot evaluate reference to string literal"
 
+class ObjectLiteralExp
+	constructor: (@props)->
+
+	evaluate: (ctx, trigger)->
+		res = {}
+
+		q = utils.reduce @props, (prop)->
+			name = prop[ 0 ][ 1 .. -2 ]
+			prop[ 1 ].evaluate( ctx, trigger ).then (val)->
+				res[ name ] = val
+
+		q.then ->
+			res
+
+	evaluateRef: (ctx, trigger)->
+		Q.reject new Error "Cannot evaluate reference to object literal"
+
 class WordLiteralExp
 	constructor: (@word)->
 #		if (@word != 'ctx') && (@word != 'trigger')
@@ -230,6 +247,7 @@ module.exports =
 	NumberLiteralExp: NumberLiteralExp
 	StringLiteralExp: StringLiteralExp
 	WordLiteralExp: WordLiteralExp
+	ObjectLiteralExp: ObjectLiteralExp
 	SubscriptExp: SubscriptExp
 	CallExp: CallExp
 	PropExp: PropExp
