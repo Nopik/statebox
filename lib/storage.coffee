@@ -112,4 +112,7 @@ class Storage extends events.EventEmitter
 	updateContext: (ctx)->
 		Q.resolve({})
 
+	addTimer: (graph_id, context_id, name, options)->
+		Q.reject({})
+
 module.exports = Storage

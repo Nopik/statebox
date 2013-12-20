@@ -17,6 +17,7 @@ url = 'mongodb://localhost/statebox-test'
 
 actions = _.clone SpecHelpers.actions
 actions.trigger = new Runners.Trigger()
+actions.startTimer = new Runners.StartTimer()
 
 new_storage = ->
 	new StateBox.StorageAdapters.Mongo( url, { processDelayMs: 100 } )
@@ -175,6 +176,7 @@ describe 'Mongo Storage', ->
 					};
 
 					@b -> b {};
+					@t -> t {};
 				};
 
 				state b {
@@ -192,6 +194,12 @@ describe 'Mongo Storage', ->
 				state d {
 					-> {
 						= ctx.bar = 1;
+					}
+				}
+
+				state t {
+					-> {
+						startTimer 't1', 100, { firstIn: 100, count: 42 };
 					}
 				}
 """
@@ -259,4 +267,15 @@ describe 'Mongo Storage', ->
 			SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
 				[ 'b', {} ]
 				[ 'c', {} ]
+			]
+
+		it 'adds timer', (done)->
+			fs = [
+				(ctx, name)=> #t
+			]
+
+			SpecHelpers.waitForTriggers @storage, fs, done
+
+			SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
+				[ 't', {} ]
 			]

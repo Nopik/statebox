@@ -47,7 +47,24 @@ class Trigger
 		else
 			Q.reject new Error 'No trigger name'
 
+class StartTimer
+	invoke: (ctx, args)->
+		name = args?[ 0 ]
+		interval = args?[ 1 ]
+		options = args?[ 2 ]
+		options = {} if !options?
+
+		if name? && interval? && interval > 0
+			ctx.storage.addTimer ctx.graph_id, ctx.id, name,
+				interval: interval
+				count: options.count
+				firstIn: options.firstIn
+				expiry: options.expiry
+		else
+			Q.reject new Error 'Invalid parameters'
+
 module.exports =
 	Http: Http
 	Json: Json
 	Trigger: Trigger
+	StartTimer: StartTimer

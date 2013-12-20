@@ -16,12 +16,26 @@ TriggerSchema = mongoose.Schema
 	name: String
 	values: String
 
+TimerSchema = mongoose.Schema
+	count: Number
+	firstIn: Number
+	expiry: Number
+	interval: Number
+	ticks: Number
+
+TickSchema = mongoose.Schema
+	name: String
+	at: Number
+	number: Number
+
 ContextSchema = mongoose.Schema
 	graph_id: String
 	values: String
 	status: Number
 	version: Number
 	triggers: [ TriggerSchema ]
+	timers: mongoose.Schema.Types.Mixed
+	ticks: [ TickSchema ]
 , { safe: { w: 1 } }
 
 GraphSchema.methods.getGraph = (storage)->
@@ -37,6 +51,8 @@ ContextSchema.methods.getContext = (storage)->
 	c
 
 ContextSchema.index { "triggers.0._id": 1 }
+ContextSchema.index { "ticks.0.at": 1 }
+ContextSchema.index { "ticks.0.name": 1 }
 
 GraphModel = mongoose.model 'Graph', GraphSchema
 ContextModel = mongoose.model 'Context', ContextSchema
@@ -51,11 +67,17 @@ class MongoStorage extends Storage
 
 		q = Q.defer()
 
-		@db.once 'error', ->
+		f = ->
+			@db.removeListener 'error', g
 			q.reject new Error "Unable to connect to DB"
 
-		@db.once 'open', ->
+		g = =>
+			@db.removeListener 'error', f
 			q.resolve({})
+
+		@db.once 'error', f
+
+		@db.once 'open', g
 
 		q.promise
 
@@ -225,6 +247,59 @@ class MongoStorage extends Storage
 				q.reject err
 
 		q.promise
+
+	addTimer: (graph_id, context_id, name, options)->
+		if options.interval > 0
+			query =
+				_id: context_id
+				graph_id: graph_id
+				status: Context.Status.Active
+
+			options.count = 0 if !options.count?
+			options.expiry = 0 if !options.expiry?
+
+			s =
+				timers: {}
+
+			s.timers[ name ] =
+				count: options.count
+				firstIn: options.firstIn
+				expiry: options.expiry
+				interval: options.interval
+				ticks: 1
+
+			at = options.firstIn + Date.now()
+
+			if !at?
+				at = Date.now() + options.interval
+
+			if (options.expiry == 0) || ((options.expiry > 0) && at < options.expiry)
+				update =
+					$set: s
+					$push:
+						ticks:
+							$each: [
+								name: name
+								at: at
+								number: 0
+							]
+							$slice: -100000000 #document size is 16M anyway
+							$sort:
+								number: 1
+
+				q = Q.defer()
+
+				ContextModel.findOneAndUpdate query, update, (err, ctx)=>
+					if !err
+						q.resolve {}
+					else
+						q.reject err
+
+				q.promise
+			else
+				Q.resolve {} #timer already expired, not a fatal error
+		else
+			Q.reject new Error "Timer need positive interval"
 
 	getActiveContext: ->
 		q = Q.defer()
