@@ -38,6 +38,16 @@ class Json extends Http
 	_extract: (res)->
 		res.body
 
+class Trigger
+	invoke: (ctx, args)->
+		name = args?[ 0 ]
+
+		if name?
+			ctx.storage.addTrigger ctx.graph_id, ctx.id, name, {}
+		else
+			Q.reject new Error 'No trigger name'
+
 module.exports =
 	Http: Http
 	Json: Json
+	Trigger: Trigger

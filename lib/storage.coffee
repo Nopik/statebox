@@ -34,8 +34,8 @@ class Storage extends events.EventEmitter
 						triggerValues = trigInfo.triggerValues
 
 						@handleContext( ctx, triggerName, triggerValues ).then (ctx)=>
-							@updateContext( ctx )
-							@emit 'processedTrigger', ctx, triggerName
+							@updateContext( ctx ).fin =>
+								@emit 'processedTrigger', ctx, triggerName
 						.fail (r)->
 								console.log "Error during trigger processing: #{r}"
 						.fin =>

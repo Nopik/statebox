@@ -9,6 +9,8 @@ mongoose = require 'mongoose'
 Q = require 'q'
 
 StateBox = require '../lib/statebox'
+utils = require '../lib/utils'
+Runners = require '../lib/runners'
 
 url = 'mongodb://localhost/statebox-test'
 
@@ -29,6 +31,28 @@ actions =
 	s4: new TestActionRunner()
 	a1: new TestActionRunner()
 	a2: new TestActionRunner()
+	trigger: new Runners.Trigger()
+
+waitForTriggers = (storage, fs, done)->
+	lock = Q.defer()
+	q = utils.reduce fs, (f)=>
+		lock.promise.then (memo)->
+			lock = Q.defer()
+			f( memo.ctx, memo.name )
+
+	q.then ->
+		done()
+	, (r)->
+		done( r )
+
+	processed = (ctx, triggerName)=>
+		lock.resolve( { ctx: ctx, name: triggerName } )
+
+	storage.on 'processedTrigger', processed
+
+sendTriggers = (mgr, graphId, ctxId, triggers)->
+	utils.reduce triggers, (trigger)->
+		mgr.addTrigger( graphId, ctxId, trigger[ 0 ], trigger[ 1 ] )
 
 describe 'Mongo Storage', ->
 	beforeEach (done) ->
@@ -178,27 +202,31 @@ describe 'Mongo Storage', ->
 	describe 'Processing', ->
 		beforeEach (done)->
 			source = """
-				state a[start]
-				{
-					-> { s1; };
-
-					<- { s2; };
-
+				state a[start] {
 					@test.name {
 						= ctx.foo = 42;
 					};
 
-					@b -> b { a1; };
+					@b -> b {};
 				};
 
-				state b
-				{
-					-> { s3; };
-
-					<- { s4; };
-
-					@a -> a { a2; };
+				state b {
+					@c -> c {};
 				};
+
+				state c {
+					@c1 {
+						trigger 'd';
+					};
+
+					@d -> d {};
+				};
+
+				state d {
+					-> {
+						= ctx.bar = 1;
+					}
+				}
 """
 
 			@storage = new_storage()
@@ -244,3 +272,24 @@ describe 'Mongo Storage', ->
 				true
 			.fail (r)->
 				done( r )
+
+		it 'changes states', (done)->
+			fs = [
+				(ctx, name)=> #b
+				(ctx, name)=> #c
+					sendTriggers @mgr, @graph.id, @ctx.id, [
+						[ 'c1', {} ]
+					]
+				(ctx, name)=> #c1
+				(ctx, name)=> #d
+					v = ctx.getValue( 'bar' )
+					should.exist v
+					v.should.eql 1
+			]
+
+			waitForTriggers @storage, fs, done
+
+			sendTriggers @mgr, @graph.id, @ctx.id, [
+				[ 'b', {} ]
+				[ 'c', {} ]
+			]
