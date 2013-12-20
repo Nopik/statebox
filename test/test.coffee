@@ -9,46 +9,7 @@ nock = require 'nock'
 StateBox = require '../lib/statebox'
 _ = require 'underscore'
 Q = require 'q'
-
-waitForTriggers = (storage, fs, done)->
-	lock = Q.defer()
-	q = utils.reduce fs, (f)=>
-		lock.promise.then (memo)->
-			lock = Q.defer()
-			f( memo.ctx, memo.name )
-
-	q.then ->
-		done()
-	, (r)->
-		done( r )
-
-	processed = (ctx, triggerName)=>
-		lock.resolve( { ctx: ctx, name: triggerName } )
-
-	storage.on 'processedTrigger', processed
-
-sendTriggers = (mgr, graphId, ctxId, triggers)->
-	utils.reduce triggers, (trigger)->
-		mgr.addTrigger( graphId, ctxId, trigger[ 0 ], trigger[ 1 ] )
-
-class TestAction extends StateBox.Action.SimpleAction
-	constructor: ->
-		super( 'test', [], false )
-
-class TestActionRunner
-	constructor: (@res = {})->
-
-	invoke: ->
-		Q.resolve @res
-
-actions =
-	test: new TestActionRunner()
-	s1: new TestActionRunner()
-	s2: new TestActionRunner()
-	s3: new TestActionRunner()
-	s4: new TestActionRunner()
-	a1: new TestActionRunner()
-	a2: new TestActionRunner()
+SpecHelpers = require './spec_helpers'
 
 class TestStorage extends StateBox.Storage
 	constructor: ->
@@ -62,7 +23,7 @@ class TestStorage extends StateBox.Storage
 			processDelayMs: 1
 
 		@actions =
-			test: new TestActionRunner()
+			test: new SpecHelpers.TestActionRunner()
 
 	saveGraph: (graph)->
 		@graphs[ @graph_count ] = graph
@@ -126,7 +87,7 @@ describe 'StateBox', ->
 	describe 'Manager', ->
 		beforeEach (done)->
 			@storage = new TestStorage()
-			@storage.setActions actions
+			@storage.setActions SpecHelpers.actions
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then ->
 				done()
@@ -456,14 +417,14 @@ describe 'StateBox', ->
 	describe 'State', ->
 		beforeEach ->
 			@enterActions = [
-				new TestAction()
-				new TestAction()
-				new TestAction()
+				new SpecHelpers.TestAction()
+				new SpecHelpers.TestAction()
+				new SpecHelpers.TestAction()
 			]
 			@leaveActions = [
-				new TestAction()
-				new TestAction()
-				new TestAction()
+				new SpecHelpers.TestAction()
+				new SpecHelpers.TestAction()
+				new SpecHelpers.TestAction()
 			]
 			@state = new StateBox.State( 'test', @enterActions, @leaveActions )
 
@@ -474,7 +435,7 @@ describe 'StateBox', ->
 				sinon.spy ea, 'execute'
 
 		it 'launches enter actions', (done)->
-			ctx = { getActions: -> actions }
+			ctx = { getActions: -> SpecHelpers.actions }
 			vals = { foo: 42 }
 
 			@state.enter( ctx, vals ).then =>
@@ -489,7 +450,7 @@ describe 'StateBox', ->
 				done( r )
 
 		it 'launches leave actions', (done)->
-			ctx = { getActions: -> actions }
+			ctx = { getActions: -> SpecHelpers.actions }
 			vals = { foo: 42 }
 
 			@state.leave( ctx, vals ).then =>
@@ -507,13 +468,13 @@ describe 'StateBox', ->
 		beforeEach (done)->
 			@storage = new TestStorage()
 			@storage.setActions
-				a1: new TestActionRunner()
-				a2a: new TestActionRunner()
-				a2b: new TestActionRunner()
-				a3: new TestActionRunner()
-				a4: new TestActionRunner()
-				a5: new TestActionRunner()
-				f42: new TestActionRunner( 42 )
+				a1: new SpecHelpers.TestActionRunner()
+				a2a: new SpecHelpers.TestActionRunner()
+				a2b: new SpecHelpers.TestActionRunner()
+				a3: new SpecHelpers.TestActionRunner()
+				a4: new SpecHelpers.TestActionRunner()
+				a5: new SpecHelpers.TestActionRunner()
+				f42: new SpecHelpers.TestActionRunner( 42 )
 
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
@@ -644,9 +605,9 @@ describe 'StateBox', ->
 					a7Spy.should.have.been.calledOnce.calledWithExactly( @ctx, vals2h )
 			]
 
-			waitForTriggers @storage, fs, done
+			SpecHelpers.waitForTriggers @storage, fs, done
 
-			sendTriggers @mgr, @graph.id, @ctx.id, [
+			SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
 				[ 'a', vals1 ]
 				[ 'a', vals2 ]
 			]
@@ -708,8 +669,8 @@ describe 'StateBox', ->
 					v.should.eql testval
 			]
 
-			waitForTriggers @storage, fs, done
+			SpecHelpers.waitForTriggers @storage, fs, done
 
-			sendTriggers @mgr, @graph.id, @ctx.id, [
+			SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
 				[ 'a', vals ]
 			]

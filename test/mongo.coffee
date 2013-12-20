@@ -11,48 +11,15 @@ Q = require 'q'
 StateBox = require '../lib/statebox'
 utils = require '../lib/utils'
 Runners = require '../lib/runners'
+SpecHelpers = require './spec_helpers'
 
 url = 'mongodb://localhost/statebox-test'
 
+actions = _.clone SpecHelpers.actions
+actions.trigger = new Runners.Trigger()
+
 new_storage = ->
 	new StateBox.StorageAdapters.Mongo( url, { processDelayMs: 100 } )
-
-class TestActionRunner
-	constructor: (@res = {})->
-
-	invoke: ->
-		Q.resolve @res
-
-actions =
-	test: new TestActionRunner()
-	s1: new TestActionRunner()
-	s2: new TestActionRunner()
-	s3: new TestActionRunner()
-	s4: new TestActionRunner()
-	a1: new TestActionRunner()
-	a2: new TestActionRunner()
-	trigger: new Runners.Trigger()
-
-waitForTriggers = (storage, fs, done)->
-	lock = Q.defer()
-	q = utils.reduce fs, (f)=>
-		lock.promise.then (memo)->
-			lock = Q.defer()
-			f( memo.ctx, memo.name )
-
-	q.then ->
-		done()
-	, (r)->
-		done( r )
-
-	processed = (ctx, triggerName)=>
-		lock.resolve( { ctx: ctx, name: triggerName } )
-
-	storage.on 'processedTrigger', processed
-
-sendTriggers = (mgr, graphId, ctxId, triggers)->
-	utils.reduce triggers, (trigger)->
-		mgr.addTrigger( graphId, ctxId, trigger[ 0 ], trigger[ 1 ] )
 
 describe 'Mongo Storage', ->
 	beforeEach (done) ->
@@ -277,7 +244,7 @@ describe 'Mongo Storage', ->
 			fs = [
 				(ctx, name)=> #b
 				(ctx, name)=> #c
-					sendTriggers @mgr, @graph.id, @ctx.id, [
+					SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
 						[ 'c1', {} ]
 					]
 				(ctx, name)=> #c1
@@ -287,9 +254,9 @@ describe 'Mongo Storage', ->
 					v.should.eql 1
 			]
 
-			waitForTriggers @storage, fs, done
+			SpecHelpers.waitForTriggers @storage, fs, done
 
-			sendTriggers @mgr, @graph.id, @ctx.id, [
+			SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
 				[ 'b', {} ]
 				[ 'c', {} ]
 			]

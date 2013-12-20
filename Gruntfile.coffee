@@ -6,7 +6,7 @@ module.exports = (grunt)->
 				reporter: 'spec'
 				compilers: [ 'coffee:coffee-script' ]
 
-			all: [ 'test/**/*.coffee' ]
+			all: [ 'test/**/*.coffee', '!test/spec_helpers.coffee' ]
 
 			parser: [ 'test/parser.coffee' ]
 
