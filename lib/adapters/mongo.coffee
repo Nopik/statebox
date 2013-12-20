@@ -226,51 +226,6 @@ class MongoStorage extends Storage
 
 		q.promise
 
-#		@getContextModel( graph_id, context_id ).then (ctx)=>
-#			if ctx.status == Context.Status.Active
-#				trigger = ctx.triggers.create
-#					name: name
-#					values: JSON.stringify values
-#
-#				q = Q.defer()
-#
-#				update =
-#					$push:
-#						triggers: trigger
-#
-#					$set:
-#						version: ctx.version + 1
-#
-#				ContextModel.findOneAndUpdate { _id: ctx.id, version: ctx.version }, update, (err, ctx)=>
-#					if !err
-#						if ctx?
-#							q.resolve {}
-#						else
-#							#Either version got bumped, or context was deleted
-#							@getContextModel( graph_id, context_id ).then (ctx1)=>
-#								if ctx1?
-#									if ctx1.version > ctx.version
-#										res = @addTrigger graph_id, context_id, name, values
-#
-#										res.then (r)->
-#											q.resolve r
-#										, (r)->
-#											q.reject r
-#									else
-#										q.reject new Error "Unable to add trigger"
-#								else
-#									q.reject new Error "Context does not exist"
-#							, (r)->
-#								q.reject r
-#					else
-#						q.reject err
-#				, (r)->
-#					q.reject r
-#
-#				q.promise
-#			else
-#				Q.reject new Error "Cannot add trigger to inactive context"
-
 	getActiveContext: ->
 		q = Q.defer()
 
