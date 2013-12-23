@@ -1,5 +1,6 @@
 Q = require 'q'
 SuperAgent = require 'superagent'
+Context = require './context'
 
 class Http
 	invoke: (ctx, args)->
@@ -42,8 +43,10 @@ class Trigger
 	invoke: (ctx, args)->
 		name = args?[ 0 ]
 
+		values = args?[ 1 ] || {}
+
 		if name?
-			ctx.storage.addTrigger ctx.graph_id, ctx.id, name, {}
+			ctx.storage.addTrigger ctx.graph_id, ctx.id, name, values
 		else
 			Q.reject new Error 'No trigger name'
 
@@ -72,9 +75,45 @@ class StopTimer
 		else
 			Q.reject new Error 'Invalid parameters'
 
+class CreateContext
+	invoke: (ctx, args)->
+		name = args?[ 0 ]
+		graph = args?[ 1 ]
+
+		if name? && graph?
+			values = args[ 2 ] || {}
+
+			values[ 'contextName' ] = name
+			values[ 'parentContextId' ] = ctx.id
+			values[ 'parentContextGraphId' ] = ctx.graph_id
+
+			Context.run( graph, ctx.storage, values ).then (ctx)->
+				ctx.id
+		else
+			Q.reject new Error 'Invalid parameters'
+
+class TriggerParent
+	invoke: (ctx, args)->
+		name = args?[ 0 ]
+		values = args?[ 1 ] || {}
+
+		parentId = ctx.getValue 'parentContextId'
+		parentGraphId = ctx.getValue 'parentContextGraphId'
+		subName = ctx.getValue 'contextName'
+
+		if name? && parentId? && parentGraphId? && subName?
+			name = "sub.#{subName}.#{name}"
+			values.childContextId = ctx.id
+
+			ctx.storage.addTrigger parentGraphId, parentId, name, values
+		else
+			Q.reject new Error 'Parent context not set correctly'
+
 module.exports =
 	Http: Http
 	Json: Json
 	Trigger: Trigger
+	TriggerParent: TriggerParent
 	StartTimer: StartTimer
 	StopTimer: StopTimer
+	CreateContext: CreateContext

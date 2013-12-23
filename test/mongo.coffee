@@ -19,6 +19,8 @@ actions = _.clone SpecHelpers.actions
 actions.trigger = new Runners.Trigger()
 actions.startTimer = new Runners.StartTimer()
 actions.stopTimer = new Runners.StopTimer()
+actions.createContext = new Runners.CreateContext()
+actions.triggerParent = new Runners.TriggerParent()
 
 new_storage = ->
 	new StateBox.StorageAdapters.Mongo( url, { processDelayMs: 100 } )
@@ -310,4 +312,71 @@ describe 'Mongo Storage', ->
 
 			SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
 				[ 't', {} ]
+			]
+
+	describe 'Child contexts', ->
+		beforeEach (done)->
+			sourceChild = """
+				state a[start] {
+					-> {
+						triggerParent 'fromChild', { bar: ctx.foo };
+					}
+				};
+"""
+
+			@storage = new_storage()
+			@storage.setActions actions
+			@mgr = new StateBox.Manager( @storage )
+			@mgr.init().then =>
+				@mgr.buildGraph( sourceChild ).then (cgraph)=>
+					@cgraph = cgraph
+
+					sourceParent = """
+						state a[start] {
+							@start {
+								= ctx.subId = action.createContext( 'child', '#{cgraph.id}', { foo: 42 } );
+							};
+
+							@sub.child.fromChild {
+								= ctx.baz = trigger.bar;
+							};
+						};
+"""
+
+					@mgr.buildGraph( sourceParent ).then (pgraph)=>
+						@pgraph = pgraph
+
+						@mgr.runGraph( @pgraph.id ).then (ctx)=>
+							@ctx = ctx
+
+							@mgr.startProcessing().then ->
+								done()
+			.fail (r)->
+				done( r )
+
+		afterEach (done)->
+			@mgr.stopProcessing =>
+				@storage.disconnect().then ->
+					done()
+			.fail (r)->
+				done( r )
+
+		it 'initializes', ->
+
+		it 'handles children', (done)->
+			fs = [
+				(ctx, name)=>
+					name.should.eql 'start'
+				(ctx, name)=>
+					name.should.eql 'sub.child.fromChild'
+
+					v = ctx.getValue( 'baz' )
+					should.exist v
+					v.should.eql 42
+			]
+
+			SpecHelpers.waitForTriggers @storage, fs, done
+
+			SpecHelpers.sendTriggers @mgr, @pgraph.id, @ctx.id, [
+				[ 'start', {} ]
 			]

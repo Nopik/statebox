@@ -16,6 +16,12 @@ class Context
 		@values = new Values.Holder values
 		@status = Context.Status.Active
 
+	@run: (graph_id, storage, values)->
+		ctx = new Context( graph_id, storage, values )
+		ctx.init().then ->
+			storage.saveContext( ctx ).then ->
+				ctx
+
 	init: ->
 		@storage.getGraph( @graph_id ).then (graph)=>
 			startState = graph.getStartState()

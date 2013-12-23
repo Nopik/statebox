@@ -24,10 +24,7 @@ class Manager
 		@storage.getGraph( graph_id )
 
 	runGraph: (graph_id, values)->
-		ctx = new Context( graph_id, @storage, values )
-		ctx.init().then =>
-			@storage.saveContext( ctx ).then ->
-				ctx
+		Context.run graph_id, @storage, values
 
 	addTrigger: (graph_id, context_id, name, values)->
 		@storage.addTrigger graph_id, context_id, name, values
