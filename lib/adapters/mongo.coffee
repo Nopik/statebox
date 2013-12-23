@@ -50,6 +50,23 @@ ContextSchema.methods.getContext = (storage)->
 	c.version = @version
 	c
 
+nextTick = (ctx, tick)->
+	res = undefined
+
+	timer = ctx.currentTimer
+	now = Date.now()
+
+	if ctx.status = Context.Status.Active
+		if timer?
+			if (!timer.expiry?) || (timer.expiry == 0) || (timer.expiry > (now + timer.interval))
+				if (timer.count == 0) || (timer.count > tick.number)
+					res =
+						name: tick.name
+						number: tick.number + 1
+						at: now + timer.interval
+
+	res
+
 ContextSchema.index { "triggers.0._id": 1 }
 ContextSchema.index { "ticks.0.at": 1 }
 ContextSchema.index { "ticks.0.name": 1 }
@@ -217,9 +234,44 @@ class MongoStorage extends Storage
 				triggers:
 					_id: ctx.currentTrigger._id
 
+		remove = false
+
+		if ctx.currentTick?
+			update[ "times.#{ctx.currentTick.name}.ticks" ] = ctx.currentTick.number
+
+			next = nextTick ctx, ctx.currentTick
+
+			if next?
+				remove = true
+
+				update[ "$push" ] =
+					ticks:
+						$each: [ next ]
+						$slice: -100000000 #document size is 16M anyway
+						$sort:
+							number: 1
+			else
+				update[ "$pull" ] =
+					ticks:
+						name: ctx.currentTick.name
+						at: ctx.currentTick.at
+						number: ctx.currentTick.number
+
 		ContextModel.findOneAndUpdate { _id: ctx.id, version: ctx.version }, update, (err, c)=>
 			if !err
-				q.resolve ctx
+				if remove
+					remUpdate =
+						"$pull":
+							ticks:
+								name: ctx.currentTick.name
+								at: ctx.currentTick.at
+								number: ctx.currentTick.number
+
+					ContextModel.findOneAndUpdate { _id: ctx.id }, remUpdate, (err, c)->
+						#ignore result
+						q.resolve ctx
+				else
+					q.resolve ctx
 			else
 				q.reject err
 
@@ -248,7 +300,7 @@ class MongoStorage extends Storage
 
 		q.promise
 
-	addTimer: (graph_id, context_id, name, options)->
+	startTimer: (graph_id, context_id, name, options)->
 		if options.interval > 0
 			query =
 				_id: context_id
@@ -266,7 +318,7 @@ class MongoStorage extends Storage
 				firstIn: options.firstIn
 				expiry: options.expiry
 				interval: options.interval
-				ticks: 1
+				ticks: 0
 
 			at = options.firstIn + Date.now()
 
@@ -281,7 +333,7 @@ class MongoStorage extends Storage
 							$each: [
 								name: name
 								at: at
-								number: 0
+								number: 1
 							]
 							$slice: -100000000 #document size is 16M anyway
 							$sort:
@@ -301,10 +353,47 @@ class MongoStorage extends Storage
 		else
 			Q.reject new Error "Timer need positive interval"
 
+	stopTimer: (graph_id, context_id, name)->
+		query =
+			_id: context_id
+			graph_id: graph_id
+
+		s = {}
+		s[ "timers.#{name}" ] = ""
+
+		update =
+			$unset: s
+			$pull:
+				ticks:
+					name: name
+
+		q = Q.defer()
+
+		ContextModel.findOneAndUpdate query, update, (err, ctx)=>
+			if !err
+				q.resolve {}
+			else
+				q.reject err
+
+		q.promise
+
 	getActiveContext: ->
 		q = Q.defer()
 
-		ContextModel.findOne { "triggers.0._id": { $ne: null }, status: Context.Status.Active }, (err, model)=>
+		tickAt = Date.now()
+
+		query =
+			$or: [
+				"triggers.0._id":
+					$ne: null
+				status: Context.Status.Active
+			,
+				"ticks.0.at":
+					$lte: tickAt
+			]
+
+
+		ContextModel.findOne query, (err, model)=>
 			if !err
 				if model?
 					ctx = model.getContext( this )
@@ -319,9 +408,33 @@ class MongoStorage extends Storage
 							triggerName: trigger.name
 							triggerValues: JSON.parse trigger.values
 					else
-						q.reject new Error "Got pseudo-active context"
+						tick = model.ticks[ 0 ]
+						timer = model.timers[ tick?.name ]
+
+						if tick.number >= timer.ticks
+							if tick? && timer? && tick.at <= tickAt
+								ctx.currentTick = tick
+								ctx.currentTimer = timer
+
+								q.resolve
+									ctx: ctx
+									triggerName: "timer.#{tick.name}"
+									triggerValues: {}
+							else
+								q.reject new Error "Got pseudo-active context"
+						else
+							#Obsolete tick found, lets remove it and re-try
+							remUpdate =
+								"$pull":
+									ticks:
+										name: tick.name
+										at: tick.at
+										number: tick.number
+
+							ContextModel.findOneAndUpdate { _id: ctx.id }, remUpdate, (err, c)=>
+								q.reject new Error "Got stale tick"
 				else
-					q.reject {}
+					q.reject new Error "No model found"
 			else
 				q.reject err
 

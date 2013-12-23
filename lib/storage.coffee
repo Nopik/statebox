@@ -36,10 +36,10 @@ class Storage extends events.EventEmitter
 						@handleContext( ctx, triggerName, triggerValues ).then (ctx)=>
 							@updateContext( ctx ).fin =>
 								@emit 'processedTrigger', ctx, triggerName
-						.fail (r)->
+						.fail (r)=>
 							ctx.abort()
 							@updateContext( ctx )
-#								console.log "Error during trigger processing: #{r}"
+							console.log "Error during trigger processing: #{r}"
 						.fin =>
 							process.nextTick p
 					, =>
@@ -112,7 +112,10 @@ class Storage extends events.EventEmitter
 	updateContext: (ctx)->
 		Q.resolve({})
 
-	addTimer: (graph_id, context_id, name, options)->
+	startTimer: (graph_id, context_id, name, options)->
+		Q.reject({})
+
+	stopTimer: (graph_id, context_id, name)->
 		Q.reject({})
 
 module.exports = Storage

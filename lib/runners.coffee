@@ -55,11 +55,20 @@ class StartTimer
 		options = {} if !options?
 
 		if name? && interval? && interval > 0
-			ctx.storage.addTimer ctx.graph_id, ctx.id, name,
+			ctx.storage.startTimer ctx.graph_id, ctx.id, name,
 				interval: interval
 				count: options.count
 				firstIn: options.firstIn
 				expiry: options.expiry
+		else
+			Q.reject new Error 'Invalid parameters'
+
+class StopTimer
+	invoke: (ctx, args)->
+		name = args?[ 0 ]
+
+		if name?
+			ctx.storage.stopTimer ctx.graph_id, ctx.id, name
 		else
 			Q.reject new Error 'Invalid parameters'
 
@@ -68,3 +77,4 @@ module.exports =
 	Json: Json
 	Trigger: Trigger
 	StartTimer: StartTimer
+	StopTimer: StopTimer

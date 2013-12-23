@@ -18,6 +18,7 @@ url = 'mongodb://localhost/statebox-test'
 actions = _.clone SpecHelpers.actions
 actions.trigger = new Runners.Trigger()
 actions.startTimer = new Runners.StartTimer()
+actions.stopTimer = new Runners.StopTimer()
 
 new_storage = ->
 	new StateBox.StorageAdapters.Mongo( url, { processDelayMs: 100 } )
@@ -199,7 +200,17 @@ describe 'Mongo Storage', ->
 
 				state t {
 					-> {
-						startTimer 't1', 100, { firstIn: 100, count: 42 };
+						= ctx.tcnt = 0;
+						startTimer 't1', 10, { firstIn: 1, count: 3 };
+					}
+
+					@timer.t1 {
+						= ctx.tcnt += 1;
+						trigger 'next';
+					}
+
+					@stop {
+						stopTimer 't1';
 					}
 				}
 """
@@ -272,6 +283,27 @@ describe 'Mongo Storage', ->
 		it 'adds timer', (done)->
 			fs = [
 				(ctx, name)=> #t
+					name.should.eql 't'
+				(ctx, name)=> #timer.t1
+					name.should.eql 'timer.t1'
+				(ctx, name)=> #next
+					name.should.eql 'next'
+				(ctx, name)=> #timer.t1
+					name.should.eql 'timer.t1'
+				(ctx, name)=> #next
+					name.should.eql 'next'
+				(ctx, name)=> #timer.t1
+					name.should.eql 'timer.t1'
+				(ctx, name)=> #next
+					name.should.eql 'next'
+					SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
+						[ 'stop', {} ]
+					]
+				(ctx, name)=> #stop
+					name.should.eql 'stop'
+					v = ctx.getValue( 'tcnt' )
+					should.exist v
+					v.should.eql 3
 			]
 
 			SpecHelpers.waitForTriggers @storage, fs, done
