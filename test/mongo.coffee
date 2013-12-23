@@ -282,24 +282,24 @@ describe 'Mongo Storage', ->
 
 		it 'adds timer', (done)->
 			fs = [
-				(ctx, name)=> #t
+				(ctx, name)=>
 					name.should.eql 't'
-				(ctx, name)=> #timer.t1
+				(ctx, name)=>
 					name.should.eql 'timer.t1'
-				(ctx, name)=> #next
+				(ctx, name)=>
 					name.should.eql 'next'
-				(ctx, name)=> #timer.t1
+				(ctx, name)=>
 					name.should.eql 'timer.t1'
-				(ctx, name)=> #next
+				(ctx, name)=>
 					name.should.eql 'next'
-				(ctx, name)=> #timer.t1
+				(ctx, name)=>
 					name.should.eql 'timer.t1'
-				(ctx, name)=> #next
+				(ctx, name)=>
 					name.should.eql 'next'
 					SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
 						[ 'stop', {} ]
 					]
-				(ctx, name)=> #stop
+				(ctx, name)=>
 					name.should.eql 'stop'
 					v = ctx.getValue( 'tcnt' )
 					should.exist v
