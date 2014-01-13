@@ -15,6 +15,7 @@ class Context
 		values ?= {}
 		@values = new Values.Holder values
 		@status = Context.Status.Active
+		@storage.registerContext( this )
 
 	@run: (graph_id, storage, values)->
 		ctx = new Context( graph_id, storage, values )

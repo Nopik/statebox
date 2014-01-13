@@ -34,14 +34,15 @@ class Storage extends events.EventEmitter
 						triggerValues = trigInfo.triggerValues
 
 						@handleContext( ctx, triggerName, triggerValues ).then (ctx)=>
-							@updateContext( ctx ).fin =>
+							@updateContext( ctx ).then =>
+#								console.log ctx.id, ctx.version, triggerName
 								@emit 'processedTrigger', ctx, triggerName
 						.fail (r)=>
 							ctx.abort()
 							@updateContext( ctx )
 							console.log "Error during trigger processing: #{r}"
-						.fin =>
-							process.nextTick p
+#						.fin =>
+						process.nextTick p
 					, =>
 						@emit 'noActiveContext'
 						setTimeout p, @options[ 'processDelayMs' ]
@@ -77,6 +78,8 @@ class Storage extends events.EventEmitter
 	disconnect: ->
 		Q.resolve({})
 
+	registerContext: (ctx)->
+
 	getActiveContext: ->
 		Q.reject({})
 
@@ -103,19 +106,28 @@ class Storage extends events.EventEmitter
 	getContext: (graph_id, context_id)->
 		Q.reject({})
 
+	abortContext: (context)->
+		Q.reject({})
+
 	destroyContext: (graph_id, context_id)->
 		Q.reject({})
 
 	addTrigger: (graph_id, context_id, name, values)->
 		Q.reject({})
 
+	queueTrigger: (context, name, values)->
+		Q.reject({})
+
+	queueExtTrigger: (context, graph_id, context_id, name, values)->
+		Q.reject({})
+
 	updateContext: (ctx)->
 		Q.resolve({})
 
-	startTimer: (graph_id, context_id, name, options)->
+	startTimer: (context, name, options)->
 		Q.reject({})
 
-	stopTimer: (graph_id, context_id, name)->
+	stopTimer: (context, name)->
 		Q.reject({})
 
 module.exports = Storage

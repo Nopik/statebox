@@ -8,6 +8,8 @@ module.exports = (grunt)->
 
 			all: [ 'test/**/*.coffee', '!test/spec_helpers.coffee' ]
 
+			core: [ 'test/test.coffee' ]
+
 			parser: [ 'test/parser.coffee' ]
 
 			mongo: [ 'test/mongo.coffee' ]
@@ -33,6 +35,10 @@ module.exports = (grunt)->
 			test_parser:
 				files: [ 'src/graph.js', 'test/parser.coffee', 'src/parse_helpers.coffee' ]
 				tasks: [ 'mochacli:parser' ]
+
+#			test_core:
+#				files: [ 'lib/**/*.coffee', 'test/test.coffee', 'src/**/*.coffe', 'src/**/*.js' ]
+#				tasks: [ 'mochacli:core' ]
 
 			mongo:
 				options:

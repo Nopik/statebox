@@ -4,8 +4,14 @@ Storage = require '../storage'
 Graph = require '../graph'
 Context = require '../context'
 mongoose = require 'mongoose'
+utils = require '../utils'
 
 #mongoose.set 'debug', true
+
+ProcessingState =
+	Idle: 0
+	Busy: 1
+	Failed: 2
 
 GraphSchema = mongoose.Schema
 	source: String
@@ -18,7 +24,7 @@ TriggerSchema = mongoose.Schema
 
 TimerSchema = mongoose.Schema
 	count: Number
-	firstIn: Number
+	at: Number
 	expiry: Number
 	interval: Number
 	ticks: Number
@@ -32,7 +38,12 @@ ContextSchema = mongoose.Schema
 	graph_id: String
 	values: String
 	status: Number
-	version: Number
+	version:
+		type: Number
+		default: 0
+	processed:
+		type: Number
+		default: ProcessingState.Idle
 	triggers: [ TriggerSchema ]
 	timers: mongoose.Schema.Types.Mixed
 	ticks: [ TickSchema ]
@@ -160,12 +171,19 @@ class MongoStorage extends Storage
 
 	# Context
 
+	registerContext: (ctx)->
+		ctx.queuedTriggers = []
+		ctx.queuedExtTriggers = []
+		ctx.queuedTimersAdd = []
+		ctx.queuedTimersDel = []
+
 	saveContext: (ctx)->
 		model = new ContextModel
 			values: JSON.stringify ctx.values.serialize()
 			graph_id: ctx.graph_id
 			status: ctx.status
 			version: 1
+			processed: ProcessingState.Busy
 
 		q = Q.defer()
 
@@ -177,7 +195,8 @@ class MongoStorage extends Storage
 			else
 				q.reject err
 
-		q.promise
+		q.promise.then =>
+			@updateContext ctx
 
 	getContexts: (graph_id)->
 		q = Q.defer()
@@ -220,62 +239,199 @@ class MongoStorage extends Storage
 
 		q.promise
 
-	updateContext: (ctx)->
+	abortContext: (ctx)->
 		q = Q.defer()
 
 		update =
 			$set:
 				status: ctx.status
-				values: JSON.stringify ctx.values.serialize()
 				version: ctx.version + 1
+				processed: ProcessingState.Idle
 
-		if ctx.currentTrigger?
-			update[ "$pull" ] =
-				triggers:
-					_id: ctx.currentTrigger._id
-
-		remove = false
-
-		if ctx.currentTick?
-			update[ "times.#{ctx.currentTick.name}.ticks" ] = ctx.currentTick.number
-
-			next = nextTick ctx, ctx.currentTick
-
-			if next?
-				remove = true
-
-				update[ "$push" ] =
-					ticks:
-						$each: [ next ]
-						$slice: -100000000 #document size is 16M anyway
-						$sort:
-							number: 1
-			else
-				update[ "$pull" ] =
-					ticks:
-						name: ctx.currentTick.name
-						at: ctx.currentTick.at
-						number: ctx.currentTick.number
-
-		ContextModel.findOneAndUpdate { _id: ctx.id, version: ctx.version }, update, (err, c)=>
+		ContextModel.findOneAndUpdate { _id: ctx.id }, update, (err, c)=>
 			if !err
-				if remove
-					remUpdate =
-						"$pull":
-							ticks:
-								name: ctx.currentTick.name
-								at: ctx.currentTick.at
-								number: ctx.currentTick.number
-
-					ContextModel.findOneAndUpdate { _id: ctx.id }, remUpdate, (err, c)->
-						#ignore result
-						q.resolve ctx
-				else
+				if c?
 					q.resolve ctx
+				else
+					q.reject new Error "Unable to update context"
 			else
 				q.reject err
 
 		q.promise
+
+	updateContext: (ctx)->
+		query =
+			_id: ctx.id
+			version: ctx.version
+			processed: ProcessingState.Busy
+
+		update =
+			$set:
+				status: ctx.status
+				values: JSON.stringify ctx.values.serialize()
+
+		updateFinish =
+			$set:
+				version: ctx.version + 1
+				processed: ProcessingState.Idle
+
+		pull = {}
+		do_pull = false
+
+		push = {}
+		do_push = false
+
+		if ctx.currentTrigger?
+			pull[ 'triggers' ] =
+				_id: ctx.currentTrigger._id
+			do_pull = true
+
+		if ctx.queuedTriggers.length > 0
+			list = []
+
+			for qt in ctx.queuedTriggers
+				list.push
+					name: qt.name
+					values: JSON.stringify qt.values
+					_id: new mongoose.Types.ObjectId()
+
+			push[ 'triggers' ] =
+				$each: list
+
+			do_push = true
+
+		if ctx.currentTick?
+			update[ "timers.#{ctx.currentTick.name}.ticks" ] = ctx.currentTick.number
+
+			next = nextTick ctx, ctx.currentTick
+
+			if next?
+				push[ 'ticks' ] =
+					$each: [ next ]
+					$slice: -100000000 #document size is 16M anyway
+					$sort:
+						at: 1
+
+				do_push = true
+			else
+				ctx.queuedTimersDel.push
+					name: ctx.currentTick.name
+
+			update[ '$pullAll' ] =
+				ticks: [
+					name: ctx.currentTick.name
+					at: ctx.currentTick.at
+					number: ctx.currentTick.number
+				]
+
+		if ctx.queuedTimersAdd.length > 0
+			if !push[ 'ticks' ]?
+				push[ 'ticks' ] =
+					$each: []
+					$slice: -100000000 #document size is 16M anyway
+					$sort:
+						at: 1
+
+			for qt in ctx.queuedTimersAdd
+				update[ '$set' ][ "timers.#{qt.name}" ] =
+					at: qt.at
+					count: qt.count
+					expiry: qt.expiry
+					interval: qt.interval
+					ticks: 0
+
+				push[ 'ticks' ][ '$each' ].push
+					name: qt.name
+					at: qt.at
+					number: 1
+
+			do_push = true
+
+		if ctx.queuedTimersDel.length > 0
+			if !update[ '$pullAll' ]?
+				update[ '$pullAll' ] =
+					ticks: []
+
+			update[ '$unset' ] = {}
+
+			for qt in ctx.queuedTimersDel
+				update[ '$unset' ][ "timers.#{qt.name}" ] = 1
+
+				update[ '$pullAll' ][ 'ticks' ].push
+					name: qt.name
+
+		if do_pull
+			update[ '$pull' ] = pull
+
+		res = Q.resolve( {} )
+
+		if do_push
+			res = res.then =>
+				qq = Q.defer()
+
+				ContextModel.findOneAndUpdate query, { $push: push }, (err, c)=>
+					if !err?
+						if c?
+							qq.resolve {}
+						else
+							ctx.abort()
+							@abortContext( ctx ).fin ->
+								qq.reject new Error "Unable to push to context"
+					else
+						ctx.abort()
+						@abortContext( ctx ).fin ->
+							qq.reject err
+
+				qq.promise
+
+		res = res.then =>
+			q = Q.defer()
+
+			ContextModel.findOneAndUpdate query, update, (err, c)=>
+				if !err
+					if c?
+						q.resolve {}
+					else
+						ctx.abort()
+						@abortContext( ctx ).fin ->
+							q.reject new Error "Unable to update context"
+				else
+					ctx.abort()
+					@abortContext( ctx ).fin ->
+						q.reject err
+
+			q.promise
+
+		if ctx.queuedExtTriggers.length > 0
+			res = res.then =>
+				res = utils.reduce ctx.queuedExtTriggers, (qet)=>
+					@addTrigger qet.graph_id, qet.context_id, qet.name, qet.values
+				, {}
+
+				res.fail (r)=>
+					ctx.abort()
+					@abortContext( ctx ).fin ->
+						Q.reject r
+
+		res = res.then =>
+			q = Q.defer()
+
+			ContextModel.findOneAndUpdate query, updateFinish, (err, c)=>
+				if !err
+					if c?
+						q.resolve {}
+					else
+						ctx.abort()
+						@abortContext( ctx ).fin ->
+							q.reject new Error "Unable to finish update context"
+				else
+					ctx.abort()
+					@abortContext( ctx ).fin ->
+						q.reject err
+
+			q.promise
+
+		res
 
 	addTrigger: (graph_id, context_id, name, values)->
 		query =
@@ -300,82 +456,52 @@ class MongoStorage extends Storage
 
 		q.promise
 
-	startTimer: (graph_id, context_id, name, options)->
-		if options.interval > 0
-			query =
-				_id: context_id
-				graph_id: graph_id
-				status: Context.Status.Active
+	queueTrigger: (context, name, values)->
+		context.queuedTriggers.push
+			name: name
+			values: values
 
+		Q.resolve {}
+
+	queueExtTrigger: (context, graph_id, context_id, name, values)->
+		context.queuedExtTriggers.push
+			graph_id: graph_id
+			context_id: context_id
+			name: name
+			values: values
+
+		Q.resolve {}
+
+	startTimer: (ctx, name, options)->
+		if options.interval > 0
 			options.count = 0 if !options.count?
 			options.expiry = 0 if !options.expiry?
 
-			s =
-				timers: {}
+			at = undefined
 
-			s.timers[ name ] =
-				count: options.count
-				firstIn: options.firstIn
-				expiry: options.expiry
-				interval: options.interval
-				ticks: 0
-
-			at = options.firstIn + Date.now()
+			if options.firstIn?
+				at = options.firstIn + Date.now()
 
 			if !at?
 				at = Date.now() + options.interval
 
 			if (options.expiry == 0) || ((options.expiry > 0) && at < options.expiry)
-				update =
-					$set: s
-					$push:
-						ticks:
-							$each: [
-								name: name
-								at: at
-								number: 1
-							]
-							$slice: -100000000 #document size is 16M anyway
-							$sort:
-								number: 1
+				ctx.queuedTimersAdd.push
+					name: name
+					at: at
+					count: options.count
+					expiry: options.expiry
+					interval: options.interval
 
-				q = Q.defer()
-
-				ContextModel.findOneAndUpdate query, update, (err, ctx)=>
-					if !err
-						q.resolve {}
-					else
-						q.reject err
-
-				q.promise
+				Q.resolve {}
 			else
 				Q.resolve {} #timer already expired, not a fatal error
 		else
 			Q.reject new Error "Timer need positive interval"
 
-	stopTimer: (graph_id, context_id, name)->
-		query =
-			_id: context_id
-			graph_id: graph_id
-
-		s = {}
-		s[ "timers.#{name}" ] = ""
-
-		update =
-			$unset: s
-			$pull:
-				ticks:
-					name: name
-
-		q = Q.defer()
-
-		ContextModel.findOneAndUpdate query, update, (err, ctx)=>
-			if !err
-				q.resolve {}
-			else
-				q.reject err
-
-		q.promise
+	stopTimer: (ctx, name)->
+		ctx.queuedTimersDel.push
+			name: name
 
 	getActiveContext: ->
 		q = Q.defer()
@@ -383,17 +509,21 @@ class MongoStorage extends Storage
 		tickAt = Date.now()
 
 		query =
+			processed: ProcessingState.Idle
+			status: Context.Status.Active
 			$or: [
 				"triggers.0._id":
 					$ne: null
-				status: Context.Status.Active
 			,
 				"ticks.0.at":
 					$lte: tickAt
 			]
 
+		update =
+			$set:
+				processed: ProcessingState.Busy
 
-		ContextModel.findOne query, (err, model)=>
+		ContextModel.findOneAndUpdate query, update, (err, model)=>
 			if !err
 				if model?
 					ctx = model.getContext( this )
@@ -411,7 +541,7 @@ class MongoStorage extends Storage
 						tick = model.ticks[ 0 ]
 						timer = model.timers[ tick?.name ]
 
-						if tick.number >= timer.ticks
+						if timer? && (tick.number >= timer.ticks)
 							if tick? && timer? && tick.at <= tickAt
 								ctx.currentTick = tick
 								ctx.currentTimer = timer
@@ -423,7 +553,7 @@ class MongoStorage extends Storage
 							else
 								q.reject new Error "Got pseudo-active context"
 						else
-							#Obsolete tick found, lets remove it and re-try
+							#Obsolete tick or invalid timer found, lets remove it and re-try
 							remUpdate =
 								"$pull":
 									ticks:
@@ -432,7 +562,7 @@ class MongoStorage extends Storage
 										number: tick.number
 
 							ContextModel.findOneAndUpdate { _id: ctx.id }, remUpdate, (err, c)=>
-								q.reject new Error "Got stale tick"
+								q.reject new Error "Got stale tick or invalid timer"
 				else
 					q.reject new Error "No model found"
 			else

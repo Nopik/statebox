@@ -39,15 +39,17 @@ class Manager
 		@storage.getContext( graph_id, context_id ).then (ctx)->
 			ctx.getValue( name )
 
-	setContextValue: (graph_id, context_id, name, value)->
-		@storage.getContext( graph_id, context_id ).then (ctx)=>
-			ctx.setValue( name, value )
-			@storage.updateContext ctx
+#TODO: to have this, we'd need something like @storage.updateContext( onlyIfNotBeingProcessed: true ),
+#and possibly retry after some time if the context is currently processed.
+#	setContextValue: (graph_id, context_id, name, value)->
+#		@storage.getContext( graph_id, context_id ).then (ctx)=>
+#			ctx.setValue( name, value )
+#			@storage.updateContext ctx
 
 	abortContext: (graph_id, context_id)->
 		@getContext( graph_id, context_id ).then (ctx)=>
 			ctx.abort()
-			@storage.updateContext ctx
+			@storage.abortContext ctx
 
 	startProcessing: ->
 		@storage.process()

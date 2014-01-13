@@ -46,7 +46,7 @@ class Trigger
 		values = args?[ 1 ] || {}
 
 		if name?
-			ctx.storage.addTrigger ctx.graph_id, ctx.id, name, values
+			ctx.storage.queueTrigger ctx, name, values
 		else
 			Q.reject new Error 'No trigger name'
 
@@ -58,7 +58,7 @@ class StartTimer
 		options = {} if !options?
 
 		if name? && interval? && interval > 0
-			ctx.storage.startTimer ctx.graph_id, ctx.id, name,
+			ctx.storage.startTimer ctx, name,
 				interval: interval
 				count: options.count
 				firstIn: options.firstIn
@@ -71,7 +71,7 @@ class StopTimer
 		name = args?[ 0 ]
 
 		if name?
-			ctx.storage.stopTimer ctx.graph_id, ctx.id, name
+			ctx.storage.stopTimer ctx, name
 		else
 			Q.reject new Error 'Invalid parameters'
 
@@ -105,7 +105,7 @@ class TriggerParent
 			name = "sub.#{subName}.#{name}"
 			values.childContextId = ctx.id
 
-			ctx.storage.addTrigger parentGraphId, parentId, name, values
+			ctx.storage.queueExtTrigger ctx, parentGraphId, parentId, name, values
 		else
 			Q.reject new Error 'Parent context not set correctly'
 

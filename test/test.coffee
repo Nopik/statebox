@@ -83,6 +83,9 @@ class TestStorage extends StateBox.Storage
 
 		Q.reject({})
 
+	abortContext: ->
+		Q.resolve {}
+
 describe 'StateBox', ->
 	describe 'Manager', ->
 		beforeEach (done)->
@@ -148,7 +151,6 @@ describe 'StateBox', ->
 			saveContextSpy = sinon.spy @storage, 'saveContext'
 			destroyContextSpy = sinon.spy @storage, 'destroyContext'
 			getContextsSpy = sinon.spy @storage, 'getContexts'
-			updateContextSpy = sinon.spy @storage, 'updateContext'
 
 			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
 				@mgr.getContexts( graph.id ).then (ctxs0)=>
@@ -188,7 +190,6 @@ describe 'StateBox', ->
 													getContextSpy.should.have.been.calledOnce.calledWithExactly graph.id, ctx.id
 													saveContextSpy.should.have.been.calledOnce.calledWithExactly ctx
 													destroyContextSpy.should.have.been.calledOnce.calledWithExactly( graph.id, ctx.id )
-													updateContextSpy.should.have.been.calledOnce.calledWithExactly ctx
 													getContextsSpy.should.have.been.calledThrice.always.calledWithExactly graph.id
 
 													done()
@@ -206,20 +207,20 @@ describe 'StateBox', ->
 			.fail (r)->
 				done( r )
 
-		it 'sets context values', (done)->
-			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
-				@mgr.runGraph( graph.id ).then (ctx)=>
-					@mgr.getContextValue( graph.id, ctx.id, 'foo' ).then (v)=>
-						should.not.exist v
-
-						@mgr.setContextValue( graph.id, ctx.id, 'foo', 42 ).then =>
-							@mgr.getContextValue( graph.id, ctx.id, 'foo' ).then (v)=>
-								should.exist v
-								v.should.eql 42
-
-								done()
-			.fail (r)->
-				done( r )
+#		it 'sets context values', (done)->
+#			@mgr.buildGraph( 'state a[start] {}' ).then (graph)=>
+#				@mgr.runGraph( graph.id ).then (ctx)=>
+#					@mgr.getContextValue( graph.id, ctx.id, 'foo' ).then (v)=>
+#						should.not.exist v
+#
+#						@mgr.setContextValue( graph.id, ctx.id, 'foo', 42 ).then =>
+#							@mgr.getContextValue( graph.id, ctx.id, 'foo' ).then (v)=>
+#								should.exist v
+#								v.should.eql 42
+#
+#								done()
+#			.fail (r)->
+#				done( r )
 
 		it 'manages processing', (done)->
 			processSpy = sinon.spy @storage, 'process'
