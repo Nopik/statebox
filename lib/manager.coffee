@@ -11,6 +11,9 @@ class Manager
 	init: ->
 		@storage.connect()
 
+	stop: ->
+		@storage.disconnect()
+
 	buildGraph: (source)->
 		graph = new Graph( source, @storage )
 
