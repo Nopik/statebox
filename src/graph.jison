@@ -78,7 +78,7 @@ states
 	: state { $$ = [ $1 ]; }
 	| states state { $$ = $1.concat( [ $2 ] ); };
 
-state : STATE WORD state_flags '{' triggers '}' opt_semi { $$ = new State( $2, $5.enter, $5.leave, $5.at, $3 ); };
+state : STATE identifier state_flags '{' triggers '}' opt_semi { $$ = new State( $2, $5.enter, $5.leave, $5.at, $3 ); };
 
 state_flags : { $$ = 0; } | '[' flags ']' { $$ = $2; };
 
