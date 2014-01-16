@@ -86,6 +86,8 @@ GraphModel = mongoose.model 'Graph', GraphSchema
 ContextModel = mongoose.model 'Context', ContextSchema
 
 class MongoStorage extends Storage
+	@mongoose: mongoose
+
 	constructor: (@url, options)->
 		super( options )
 
