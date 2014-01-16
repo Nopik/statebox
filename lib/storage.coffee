@@ -1,5 +1,11 @@
 Q = require 'q'
 events = require 'events'
+log = log4js?.getLogger 'storage'
+
+#TODO
+if !log?
+	log =
+		info: ->
 
 class Storage extends events.EventEmitter
 	constructor: (@options = {})->
@@ -25,6 +31,7 @@ class Storage extends events.EventEmitter
 			@processing = q.promise
 
 			@emit 'processing'
+			log.info 'processing started'
 
 			p = =>
 				if @processingStopRequested == false
@@ -50,6 +57,7 @@ class Storage extends events.EventEmitter
 					@processingStopRequested = false
 					@processingRunning = false
 					@emit 'stoppedProcessing'
+					log.info 'processing stopped'
 					q.resolve({})
 
 			p()
