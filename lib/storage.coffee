@@ -6,6 +6,7 @@ log = log4js?.getLogger 'storage'
 if !log?
 	log =
 		info: ->
+		trace: ->
 
 class Storage extends events.EventEmitter
 	constructor: (@options = {})->
@@ -22,47 +23,53 @@ class Storage extends events.EventEmitter
 		@actions
 
 	process: ->
-		old_processing = @processing
+		if (@processingRunning != true) || (@processingStopRequested != false)
+			old_processing = @processing
 
-		@processing.then =>
-			q = Q.defer()
+			@processing.then =>
+				q = Q.defer()
 
-			@processingRunning = true
-			@processing = q.promise
+				@processingRunning = true
+				@processing = q.promise
 
-			@emit 'processing'
-			log.info 'processing started'
+				@emit 'processing'
+				log.info 'processing started'
 
-			p = =>
-				if @processingStopRequested == false
-					@getActiveContext().then (trigInfo)=>
-						ctx = trigInfo.ctx
-						triggerName = trigInfo.triggerName
-						triggerValues = trigInfo.triggerValues
+				p = =>
+					if @processingStopRequested == false
+						@getActiveContext().then (trigInfo)=>
+							ctx = trigInfo.ctx
+							triggerName = trigInfo.triggerName
+							triggerValues = trigInfo.triggerValues
 
-						@handleContext( ctx, triggerName, triggerValues ).then (ctx)=>
-							@updateContext( ctx ).then =>
-#								console.log ctx.id, ctx.version, triggerName
-								@emit 'processedTrigger', ctx, triggerName
-						.fail (r)=>
-							ctx.abort()
-							@updateContext( ctx )
-							console.log "Error during trigger processing: #{r}"
-#						.fin =>
-						process.nextTick p
-					, =>
-						@emit 'noActiveContext'
-						setTimeout p, @options[ 'processDelayMs' ]
-				else
-					@processingStopRequested = false
-					@processingRunning = false
-					@emit 'stoppedProcessing'
-					log.info 'processing stopped'
-					q.resolve({})
+							log.trace 'started to process trigger', triggerName, 'for', ctx.id
 
-			p()
+							@handleContext( ctx, triggerName, triggerValues ).then (ctx)=>
+								@updateContext( ctx ).then =>
+	#								console.log ctx.id, ctx.version, triggerName
+									@emit 'processedTrigger', ctx, triggerName
+									log.trace 'processed trigger', triggerName, 'for', ctx.id
+							.fail (r)=>
+								ctx.abort()
+								@updateContext( ctx )
+								console.log "Error during trigger processing: #{r}"
+	#						.fin =>
+							process.nextTick p
+						, =>
+							@emit 'noActiveContext'
+							setTimeout p, @options[ 'processDelayMs' ]
+					else
+						@processingStopRequested = false
+						@processingRunning = false
+						@emit 'stoppedProcessing'
+						log.info 'processing stopped'
+						q.resolve({})
 
-			old_processing
+				p()
+
+				old_processing
+		else
+			Q.resolve {}
 
 	stopProcessing: (cb)->
 		@processingStopRequested = true
