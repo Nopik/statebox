@@ -92,8 +92,8 @@ trigger
 	: TRIG_IN '{' actions '}' { $$ = { enter: $3 }; }
 	| TRIG_OUT '{' actions '}' { $$ = { leave: $3 }; }
 	| TRIG_AT identifier '{' actions '}' { $$ = { at: { at: $2, exe: $4, to: undefined } }; }
-	| TRIG_AT identifier TRIG_IN WORD '{' actions '}' { $$ = { at: { at: $2, exe: $6, to: $4 } }; }
-	| TRIG_AT identifier TRIG_IN WORD { $$ = { at: { at: $2, exe: [], to: $4 } }; };
+	| TRIG_AT identifier TRIG_IN identifier '{' actions '}' { $$ = { at: { at: $2, exe: $6, to: $4 } }; }
+	| TRIG_AT identifier TRIG_IN identifier { $$ = { at: { at: $2, exe: [], to: $4 } }; };
 
 actions
 	: { $$ = []; }
