@@ -628,6 +628,7 @@ describe 'StateBox', ->
 			@storage.setActions
 				http: new StateBox.Runners.Http()
 				getJSON: new StateBox.Runners.Json()
+				amqp: new StateBox.Runners.Amqp()
 
 			@mgr = new StateBox.Manager( @storage )
 			@mgr.init().then =>
@@ -637,6 +638,7 @@ describe 'StateBox', ->
 						@a {
 							= ctx.res = action.http( "http://"+trigger.host+":"+trigger.port+trigger.path );
 							= ctx.baz = action.getJSON( "http://"+trigger.host+":"+trigger.port+trigger.path+"2" );
+							= ctx.qux = action.amqp( "amqp://localhost", "iris", "iris.email_blacklist", { val: 'some'} );
 						}
 					}
 """
@@ -677,6 +679,9 @@ describe 'StateBox', ->
 					v = ctx.getValue( 'baz' )
 					should.exist v
 					v.should.eql testval
+
+					v = ctx.getValue( 'qux' )
+					should.exist v
 			]
 
 			SpecHelpers.waitForTriggers @storage, fs, done

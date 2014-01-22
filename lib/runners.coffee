@@ -5,24 +5,28 @@ amqp = require 'amqp'
 
 class Amqp
 	invoke: (ctx, args)->
-		host = args[0]
-		port = args[1]
-		exchange_name = args[2]
-		routing_key = args[3]
-		message = args[4]
-
-		connOpts = { host: host }
-		connOpts.port = port if port?
+		url = args[0]
+		exchange_name = args[1]
+		routing_key = args[2]
+		message = args[3]
 
 		d = Q.defer()
 
-		connection = amqp.createConnection(connOpts)
+		connection = amqp.createConnection(url, { reconnect: false })
 
 		connection.on 'ready', ->
-			exchange = connection.exchange exchange_name, { autoDelete: false, durable: true }, (exc) ->
-				exchange.publish routing_key, message
+			exchange = connection.exchange exchange_name, { autoDelete: false, durable: true, confirm: true }, (exc) ->
+				exc.publish routing_key, message, {}, (error) ->
+					if error
+						d.reject new Error 'Error during amqp exchange publish'
+					else
+						d.resolve {}
 
-				d.resolve {}
+		connection.on 'error', ->
+			d.reject new Error 'Error during amqp connection'
+
+		connection.on 'timeout', ->
+			d.reject new Error 'Timout during amqp connection'
 
 		d.promise
 
