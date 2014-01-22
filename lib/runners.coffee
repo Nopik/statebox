@@ -1,6 +1,31 @@
 Q = require 'q'
 SuperAgent = require 'superagent'
 Context = require './context'
+amqp = require 'amqp'
+
+class Amqp
+	invoke: (ctx, args)->
+		host = args[0]
+		port = args[1]
+		exchange_name = args[2]
+		routing_key = args[3]
+		message = args[4]
+
+		connOpts = { host: host }
+		connOpts.port = port if port?
+
+		d = Q.defer()
+
+		connection = amqp.createConnection(connOpts)
+
+		connection.on 'ready', ->
+			exchange = connection.exchange exchange_name, { autoDelete: false, durable: true }, (exc) ->
+				exchange.publish routing_key, message
+
+				d.resolve {}
+
+		d.promise
+
 
 class Http
 	invoke: (ctx, args)->
@@ -110,6 +135,7 @@ class TriggerParent
 			Q.reject new Error 'Parent context not set correctly'
 
 module.exports =
+	Amqp: Amqp
 	Http: Http
 	Json: Json
 	Trigger: Trigger
