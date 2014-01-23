@@ -638,7 +638,10 @@ describe 'StateBox', ->
 						@a {
 							= ctx.res = action.http( "http://"+trigger.host+":"+trigger.port+trigger.path );
 							= ctx.baz = action.getJSON( "http://"+trigger.host+":"+trigger.port+trigger.path+"2" );
-							= ctx.qux = action.amqp( "amqp://localhost", "iris", "iris.email_blacklist", { val: 'some'} );
+						}
+
+						@b {
+							= ctx.qux = action.amqp( "amqp://" + trigger.host, trigger.exchange, trigger.routing_key, { val: 'some'} );
 						}
 					}
 """
@@ -679,13 +682,34 @@ describe 'StateBox', ->
 					v = ctx.getValue( 'baz' )
 					should.exist v
 					v.should.eql testval
-
-					v = ctx.getValue( 'qux' )
-					should.exist v
 			]
 
 			SpecHelpers.waitForTriggers @storage, fs, done
 
 			SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
 				[ 'a', vals ]
+			]
+
+		it 'call amqp', (done)->
+			fake_invoke = (ctx, args) ->
+				"#{args[0]},#{args[1]},#{args[2]}"
+
+			@storage.actions.amqp.invoke = fake_invoke
+
+			vals =
+				host: 'localhost'
+				exchange: 'some_exchange'
+				routing_key: 'some_key'
+
+			fs = [
+				(ctx, name)=>
+					v = ctx.getValue( 'qux' )
+					should.exist v
+					v.should.eql "amqp://localhost,some_exchange,some_key"
+			]
+
+			SpecHelpers.waitForTriggers @storage, fs, done
+
+			SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
+				[ 'b', vals ]
 			]
