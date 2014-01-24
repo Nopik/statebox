@@ -17,15 +17,18 @@ class Amqp
 		connection.on 'ready', ->
 			exchange = connection.exchange exchange_name, { autoDelete: false, durable: true, confirm: true }, (exc) ->
 				exc.publish routing_key, message, {}, (error) ->
+					connection.end()
 					if error
 						d.reject new Error 'Error during amqp exchange publish'
 					else
 						d.resolve {}
 
 		connection.on 'error', ->
+			connection.end()
 			d.reject new Error 'Error during amqp connection'
 
 		connection.on 'timeout', ->
+			connection.end()
 			d.reject new Error 'Timout during amqp connection'
 
 		d.promise
