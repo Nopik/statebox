@@ -14,6 +14,11 @@ module.exports = (grunt)->
 
 			mongo: [ 'test/mongo.coffee' ]
 
+			xunit:
+				options:
+					reporter: 'xunit-file'
+					files: [ 'test/**/*.coffee', '!test/spec_helpers.coffee' ]
+
 		jison:
 			target:
 				files:

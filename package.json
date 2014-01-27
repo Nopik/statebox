@@ -38,6 +38,7 @@
     "sinon-chai": "~2.4.0",
     "grunt-jison": "~1.2.1",
     "jison": "~0.4.13",
-    "nock": "~0.25.0"
+    "nock": "~0.25.0",
+    "xunit-file": "0.0.5"
   }
 }
