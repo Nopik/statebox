@@ -39,6 +39,7 @@
     "grunt-jison": "~1.2.1",
     "jison": "~0.4.13",
     "nock": "~0.25.0",
-    "xunit-file": "0.0.5"
+    "xunit-file": "0.0.5",
+    "grunt-cli": "~0.1.13"
   }
 }
