@@ -12,7 +12,7 @@ class Amqp
 
 		d = Q.defer()
 
-		connection = amqp.createConnection(url, { reconnect: false })
+		connection = amqp.createConnection( { url: url }, { reconnect: false })
 
 		connection.on 'ready', ->
 			exchange = connection.exchange exchange_name, { autoDelete: false, durable: true, confirm: true }, (exc) ->
