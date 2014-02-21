@@ -46,7 +46,7 @@ ContextSchema = mongoose.Schema
 		default: ProcessingState.Idle
 	triggers: [ TriggerSchema ]
 	timers: mongoose.Schema.Types.Mixed
-	ticks: [ TickSchema ]
+	ticks: []
 , { safe: { w: 1 } }
 
 GraphSchema.methods.getGraph = (storage)->
@@ -319,12 +319,11 @@ class MongoStorage extends Storage
 				ctx.queuedTimersDel.push
 					name: ctx.currentTick.name
 
-			update[ '$pullAll' ] =
-				ticks: [
-					name: ctx.currentTick.name
-					at: ctx.currentTick.at
-					number: ctx.currentTick.number
+			pull[ 'ticks' ] =
+				'$or': [
+					{ name: ctx.currentTick.name, number: ctx.currentTick.number }
 				]
+			do_pull = true
 
 		if ctx.queuedTimersAdd.length > 0
 			if !push[ 'ticks' ]?
@@ -350,16 +349,19 @@ class MongoStorage extends Storage
 			do_push = true
 
 		if ctx.queuedTimersDel.length > 0
-			if !update[ '$pullAll' ]?
-				update[ '$pullAll' ] =
-					ticks: []
+			if !pull[ 'ticks' ]?
+				pull[ 'ticks' ] =
+					'$or': []
+			do_pull = true
 
 			update[ '$unset' ] = {}
 
 			for qt in ctx.queuedTimersDel
 				update[ '$unset' ][ "timers.#{qt.name}" ] = 1
+				# delete set operation to avoid set-unset conflict in mongo update operation
+				delete update[ "timers.#{qt.name}.ticks" ]
 
-				update[ '$pullAll' ][ 'ticks' ].push
+				pull[ 'ticks' ][ '$or' ].push
 					name: qt.name
 
 		if do_pull
