@@ -207,7 +207,7 @@ describe 'Mongo Storage', ->
 						startTimer 't1', 10, { firstIn: 1, count: 3 };
 					}
 
-					@timer.t1 {
+					@timer.tick.t1 {
 						= ctx.tcnt += 1;
 						trigger 'next';
 					}
@@ -288,17 +288,17 @@ describe 'Mongo Storage', ->
 				(ctx, name)=>
 					name.should.eql 't'
 				(ctx, name)=>
-					name.should.eql 'timer.t1'
+					name.should.eql 'timer.tick.t1'
 				(ctx, name)=>
 					name.should.eql 'next'
 				(ctx, name)=>
-					name.should.eql 'timer.t1'
+					name.should.eql 'timer.tick.t1'
 				(ctx, name)=>
 					name.should.eql 'next'
 				(ctx, name)=>
-					name.should.eql 'timer.t1'
+					name.should.eql 'timer.tick.t1'
 				(ctx, name)=>
-					name.should.eql 'next'
+					name.should.eql 'timer.finished.t1'
 					SpecHelpers.sendTriggers @mgr, @graph.id, @ctx.id, [
 						[ 'stop', {} ]
 					]

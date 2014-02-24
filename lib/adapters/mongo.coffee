@@ -319,6 +319,15 @@ class MongoStorage extends Storage
 				ctx.queuedTimersDel.push
 					name: ctx.currentTick.name
 
+				push[ 'triggers' ] =
+					$each: [
+						name: "timer.finished.#{ctx.currentTick.name}"
+						values: JSON.stringify {}
+						_id: new mongoose.Types.ObjectId()
+					]
+
+				do_push = true
+
 			pull[ 'ticks' ] =
 				'$or': [
 					{ name: ctx.currentTick.name, number: ctx.currentTick.number }
@@ -552,7 +561,7 @@ class MongoStorage extends Storage
 
 								q.resolve
 									ctx: ctx
-									triggerName: "timer.#{tick.name}"
+									triggerName: "timer.tick.#{tick.name}"
 									triggerValues: {}
 							else
 								q.reject new Error "Got pseudo-active context"
