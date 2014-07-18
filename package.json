@@ -1,18 +1,18 @@
 {
   "name": "statebox",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "main": "index.js",
-  "description": "Engine for running tons of state machines concurrently.",
-  "homepage": "https://workspaces.codeproject.com/kbnopik/state-box",
-  "bugs": "https://workspaces.codeproject.com/kbnopik/state-box/tasks",
+  "description": "State Machine as a Service: Engine for running tons of state machines concurrently.",
+  "homepage": "https://github.com/Nopik/statebox",
+  "bugs": "https://github.com/Nopik/statebox",
   "author": {
     "name": "Kamil Burzynski",
-    "email": "kamil@codeproject.com",
-    "url": "https://workspaces.codeproject.com/kbnopik"
+    "email": "kamil@nopik.net",
+    "url": "http://nopik.net"
   },
   "repository": {
     "type": "git",
-    "url": "https://git.codeproject.com/kbnopik/state-box"
+    "url": "https://github.com/Nopik/statebox"
   },
   "licenses": [
     {
